@@ -194,21 +194,29 @@ export default function Home() {
     const banner = bannerRef.current;
     const card = categoryCardRef.current;
     if (!banner || !card) return;
-    const updatePreview = () => {
-      if (window.innerWidth < 1024) return setShowBannerPreview(false);
-      const bannerRect = banner.getBoundingClientRect();
-      const cardRect = card.getBoundingClientRect();
-      const shouldShow = currentQuestion >= 2 && bannerRect.bottom < 84 && cardRect.bottom > 220;
-      setShowBannerPreview(current => current === shouldShow ? current : shouldShow);
-    };
-    window.addEventListener('scroll', updatePreview, { passive: true });
-    window.addEventListener('resize', updatePreview);
-    updatePreview();
+    setShowBannerPreview(false);
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    let bannerVisible = true;
+    let cardVisible = true;
+    const updatePreview = () => setShowBannerPreview(!bannerVisible && cardVisible && desktop.matches);
+    const bannerObserver = new IntersectionObserver(([entry]) => {
+      bannerVisible = entry.isIntersecting;
+      updatePreview();
+    }, { threshold: .02, rootMargin: '-80px 0px 0px 0px' });
+    const cardObserver = new IntersectionObserver(([entry]) => {
+      cardVisible = entry.isIntersecting;
+      updatePreview();
+    }, { threshold: 0, rootMargin: '-72px 0px -16px 0px' });
+    const handleBreakpoint = () => updatePreview();
+    bannerObserver.observe(banner);
+    cardObserver.observe(card);
+    desktop.addEventListener('change', handleBreakpoint);
     return () => {
-      window.removeEventListener('scroll', updatePreview);
-      window.removeEventListener('resize', updatePreview);
+      bannerObserver.disconnect();
+      cardObserver.disconnect();
+      desktop.removeEventListener('change', handleBreakpoint);
     };
-  }, [draft.company, currentStep, currentQuestion]);
+  }, [draft.company, currentStep]);
 
   const validateGroup = (group: Group) => {
     const current = answer(group.name);
@@ -295,8 +303,8 @@ export default function Home() {
               <ReviewDock group={group} groupIndex={currentStep} totalGroups={groups.length} answer={current} currentQuestion={currentQuestion} onSelect={moveToQuestion} />
               <div id="question-0" data-question="0" className={'question question-focus ' + (currentQuestion === 0 ? 'is-current' : '')}><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
               <div id="question-1" data-question="1" className={'question question-focus ' + (currentQuestion === 1 ? 'is-current' : '')}><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
-              <div className={'banner-mini-preview ' + (showBannerPreview ? 'is-visible' : '')} aria-hidden={!showBannerPreview}>{group.images.map((image, imageIndex) => <button type="button" key={image} onClick={() => setPhoto(image)}><img src={asset(image)} alt={'Xem nhanh Option ' + (imageIndex + 1)} /><span>OPTION 0{imageIndex + 1}</span></button>)}</div>
               <div id="question-2" data-question="2" className={'question question-focus ' + (currentQuestion === 2 ? 'is-current' : '')}><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>
+              <div className={'banner-mini-preview ' + (showBannerPreview ? 'is-visible' : '')} aria-hidden={!showBannerPreview}><p>Banner đang đánh giá</p><div>{group.images.map((image, imageIndex) => <button type="button" key={image} onClick={() => setPhoto(image)}><img src={asset(image)} alt={'Xem nhanh Option ' + (imageIndex + 1)} /><span>OPTION 0{imageIndex + 1}</span></button>)}</div></div>
               <div className="extra-content"><div id="question-3" data-question="3" className={'question question-focus ' + (currentQuestion === 3 ? 'is-current' : '')}><h3><i>04</i>Bạn thấy điểm nào của nhóm banner này đang làm tốt?</h3><p>Chọn tối đa 8.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
                 <div id="question-4" data-question="4" className={'question question-focus ' + (currentQuestion === 4 ? 'is-current' : '')}><h3><i>05</i>Bạn thấy nhóm banner này cần cải thiện điểm nào?</h3><p>Chọn tối đa 8.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Ý kiến khác<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Nhập ý kiến khác" /></label>}</div>
                 <div id="question-5" data-question="5" className={'question question-focus feedback-note ' + (currentQuestion === 5 ? 'is-current' : '')}><h3><i>06</i>Đóng góp ý kiến của anh / chị để cải thiện banner</h3><textarea rows={3} value={current.note} onChange={event => patch(group.name, { note: event.target.value })} placeholder="Anh / chị có thể góp ý ngắn về nội dung, màu sắc, hình ảnh hoặc cách trình bày..." /></div></div>
