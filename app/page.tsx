@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, ChevronLeft, ChevronRight, Eye, Heart, MessageCircle, MessageSquareText, Pencil, Send, Star, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Company = 'Nguyên Kim' | 'Chính Nhân' | 'Kết Nối Thông Minh';
 type Answer = { score?: number; firstImpression?: string; messageClarity?: string; good: string[]; improve: string[]; other: string; note: string };
@@ -118,10 +118,9 @@ export default function Home() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
-  const bannerStickyRef = useRef<HTMLDivElement>(null);
+  const bannerRef = useRef<HTMLDivElement>(null);
   const categoryCardRef = useRef<HTMLElement>(null);
-  const [bannerStickyHeight, setBannerStickyHeight] = useState(0);
-  const [bannerIsStuck, setBannerIsStuck] = useState(false);
+  const [showBannerPreview, setShowBannerPreview] = useState(false);
 
   useEffect(() => {
     try {
@@ -192,31 +191,26 @@ export default function Home() {
   }, [draft.company, currentStep, groups.length]);
 
   useEffect(() => {
-    const banner = bannerStickyRef.current;
+    const banner = bannerRef.current;
     const card = categoryCardRef.current;
     if (!banner || !card) return;
     const stickyTop = 88;
-    const updateStickyState = () => {
+    const updatePreview = () => {
       if (window.innerWidth < 1024) {
-        setBannerIsStuck(false);
+        setShowBannerPreview(false);
         return;
       }
       const bannerRect = banner.getBoundingClientRect();
       const cardRect = card.getBoundingClientRect();
-      const height = Math.ceil(bannerRect.height);
-      setBannerStickyHeight(current => current === height ? current : height);
-      const isStuck = bannerRect.top <= stickyTop && cardRect.bottom > stickyTop + height;
-      setBannerIsStuck(current => current === isStuck ? current : isStuck);
+      const shouldShow = bannerRect.bottom < stickyTop && cardRect.bottom > stickyTop + 132;
+      setShowBannerPreview(current => current === shouldShow ? current : shouldShow);
     };
-    const observer = new ResizeObserver(updateStickyState);
-    observer.observe(banner);
-    window.addEventListener('scroll', updateStickyState, { passive: true });
-    window.addEventListener('resize', updateStickyState);
-    updateStickyState();
+    window.addEventListener('scroll', updatePreview, { passive: true });
+    window.addEventListener('resize', updatePreview);
+    updatePreview();
     return () => {
-      observer.disconnect();
-      window.removeEventListener('scroll', updateStickyState);
-      window.removeEventListener('resize', updateStickyState);
+      window.removeEventListener('scroll', updatePreview);
+      window.removeEventListener('resize', updatePreview);
     };
   }, [draft.company, currentStep]);
 
@@ -298,11 +292,11 @@ export default function Home() {
           {currentStep < groups.length ? (() => {
             const group = groups[currentStep];
             const current = answer(group.name);
-            const categoryClass = 'card category step-card ' + (errors.some(error => error.endsWith(group.name)) ? 'error ' : '') + (bannerIsStuck ? 'banner-sticky-active' : '');
-            const categoryStyle = bannerIsStuck ? { '--banner-sticky-height': `${bannerStickyHeight}px` } as CSSProperties : undefined;
-            return <section ref={categoryCardRef} className={categoryClass} style={categoryStyle}>
+            const categoryClass = 'card category step-card ' + (errors.some(error => error.endsWith(group.name)) ? 'error ' : '');
+            return <section ref={categoryCardRef} className={categoryClass}>
               <div className="category-head"><div><p>NHÓM BANNER {String(currentStep + 1).padStart(2, '0')} / {String(groups.length).padStart(2, '0')}</p><h2>{group.name}</h2><span>2 banner · 1 đánh giá chung</span></div><small>{complete(group.name) ? <><Check size={14} /> Đã đánh giá</> : 'Chưa đánh giá'}</small></div>
-              <div ref={bannerStickyRef} className="banner-sticky-wrap"><div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={asset(image)} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="eager" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div></div>
+              <div ref={bannerRef} className="banner-sticky-wrap"><div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={asset(image)} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="eager" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div></div>
+              <div className={'banner-mini-preview ' + (showBannerPreview ? 'is-visible' : '')} aria-hidden={!showBannerPreview}>{group.images.map((image, imageIndex) => <button type="button" key={image} onClick={() => setPhoto(image)}><img src={asset(image)} alt={'Xem nhanh Option ' + (imageIndex + 1)} /><span>OPTION 0{imageIndex + 1}</span></button>)}</div>
               <ReviewDock group={group} groupIndex={currentStep} totalGroups={groups.length} answer={current} currentQuestion={currentQuestion} onSelect={moveToQuestion} />
               <div id="question-0" data-question="0" className={'question question-focus ' + (currentQuestion === 0 ? 'is-current' : '')}><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
               <div id="question-1" data-question="1" className={'question question-focus ' + (currentQuestion === 1 ? 'is-current' : '')}><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>

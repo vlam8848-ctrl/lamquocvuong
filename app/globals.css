@@ -120,9 +120,9 @@ button,input,select,textarea{font:inherit}
 .survey .feedback-note.is-current{box-shadow:0 0 0 3px var(--brand-soft)}
 @media(max-width:760px){.survey .feedback-note{margin-left:20px;margin-right:20px;padding:16px}.survey .feedback-note h3{font-size:17px}}
 
-/* Preserve the existing two-banner presentation without an opaque sticky spacer. */
+/* Original banners stay in normal flow; a small preview replaces the full-size sticky block. */
 .survey .banner-sticky-wrap{display:flow-root;position:static;margin:22px 0}
 .survey .category .banner-sticky-wrap .banners{margin:0 28px}
-@media(min-width:1024px){.survey .banner-sticky-wrap{position:sticky;top:88px;z-index:2}}
-@media(min-width:1024px){.survey .category.banner-sticky-active .banner-sticky-wrap{margin-bottom:calc(22px + var(--banner-sticky-height,0px))}}
+.survey .banner-mini-preview{display:none}
+@media(min-width:1024px){.survey .banner-mini-preview.is-visible{position:sticky;top:84px;z-index:7;display:grid;grid-template-columns:repeat(2,minmax(0,150px));justify-content:end;gap:8px;margin:0 28px 112px;padding:8px;border:1px solid #e2e8f0;border-radius:14px;background:#fffffff5;box-shadow:0 8px 20px rgba(16,24,40,.1)}.survey .banner-mini-preview button{position:relative;overflow:hidden;border:1px solid #e1e7ed;border-radius:9px;background:#f5f7fa;padding:0;text-align:left}.survey .banner-mini-preview img{display:block;width:100%;height:76px;object-fit:cover}.survey .banner-mini-preview span{position:absolute;left:5px;top:5px;border-radius:5px;background:var(--brand-primary);padding:3px 5px;color:#fff;font-size:9px;font-weight:800}}
 @media(max-width:760px){.survey .category .banner-sticky-wrap .banners{margin:0 20px}}
