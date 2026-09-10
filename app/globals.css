@@ -124,4 +124,5 @@ button,input,select,textarea{font:inherit}
 .survey .banner-sticky-wrap{display:flow-root;position:static;margin:22px 0}
 .survey .category .banner-sticky-wrap .banners{margin:0 28px}
 @media(min-width:1024px){.survey .banner-sticky-wrap{position:sticky;top:88px;z-index:2}}
+@media(min-width:1024px){.survey .category.banner-sticky-active .banner-sticky-wrap{margin-bottom:calc(22px + var(--banner-sticky-height,0px))}}
 @media(max-width:760px){.survey .category .banner-sticky-wrap .banners{margin:0 20px}}
