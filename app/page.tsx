@@ -3,45 +3,219 @@
 import { Check, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-type Company='Nguyên Kim'|'Chính Nhân';
-type Answer={score?:number;firstImpression?:string;messageClarity?:string;good:string[];improve:string[];other:string;note:string};
-type Draft={name:string;department:string;company:Company|'';answers:Record<string,Answer>;firstWebsiteNeed?:string;textAmount?:string;clickIntent?:string;global:string};
-const departments=['Marketing','Kinh doanh','PM Online','Mua hàng','Kỹ thuật','HCNS','Khác'];
-const first=['Sản phẩm','Giá / Khuyến mãi','Nội dung chính','Màu sắc / Hình ảnh','Thương hiệu','Không có gì nổi bật'];
-const clarity=['Hiểu ngay','Hiểu nhưng phải nhìn thêm','Hơi khó hiểu','Không hiểu rõ'];
-const good=['Sản phẩm nổi bật','Màu sắc đẹp','Dễ đọc','Nội dung rõ ràng','Giá / Khuyến mãi nổi bật','Nhìn hiện đại','Nhận diện thương hiệu rõ','Không có điểm nào đặc biệt'];
-const improve=['Làm sản phẩm nổi bật hơn','Giảm bớt chữ','Làm nội dung dễ hiểu hơn','Làm giá / Khuyến mãi nổi bật hơn','Màu sắc thu hút hơn','Sắp xếp lại cho dễ nhìn','Làm thương hiệu rõ hơn','Không cần chỉnh','Khác'];
-const levels=[['Chưa đạt','Khó hiểu / chưa thu hút'],['Cần cải thiện','Có ý nhưng còn nhiều điểm chưa ổn'],['Đạt','Dễ hiểu / có thể sử dụng'],['Tốt','Rõ ràng / đẹp / khá thu hút'],['Rất tốt','Nổi bật / dễ hiểu / tạo ấn tượng ngay']];
-const webFirst=['Sản phẩm','Giá','Khuyến mãi','Điểm nổi bật của sản phẩm','Thương hiệu','Nút xem thêm / mua hàng'];
-const textAmount=['Quá nhiều','Hơi nhiều','Vừa đủ','Có thể thêm thông tin'];
-const clickIntent=['Rất muốn','Có thể','Không chắc','Không muốn'];
-const NK=[
- ['Laptop',['/banners/4.png','/banners/731761836_1660404446092190_8940495999503197811_n.jpg']],['PC',['/banners/3.png','/banners/747625327_1674673154665319_3302438534809789923_n.jpg']],['LCD / Màn hình',['/banners/616811699_1511266151006021_9046361683076941228_n.jpg','/banners/666047947_1583526670446635_3788494658393941418_n.jpg']],['Phụ kiện',['/banners/611256711_1326692079497375_270400890844479602_n.jpg','/banners/663238762_1399808015519114_3412210904947284787_n.jpg']],['Linh kiện',['/banners/1788936265228_201525182566124453_7011973515233209377_edb5b45b607ea665f81233fcaa32c182.jpg','/banners/672681412_1591893246276644_3636714957270481989_n.jpg']],['Phần mềm',['/banners/8.png','/banners/Lightroom%20w%20Classic.png']],['Máy in',['/banners/1788860801422_201525182566124453_7011973515233209377_bedf5f81fd6617aa51f977aa1b4521fb.jpg','/banners/6.png']]
-] as [string,[string,string]][];
-const CN=[
- ['Laptop',['/banners/IdeaPad%20Slim%203%20-%20Copy.jpg','/banners/Lenovo%20LOQ%20Essential.jpg']],['PC',['/banners/767483411_1513397350826846_8996851914196950690_n.jpg','/banners/OP2q.png']],['LCD / Màn hình',['/banners/Asus%20ProArt.png','/banners/viewsonic.png']],['Phụ kiện',['/banners/611256711_1326692079497375_270400890844479602_n.jpg','/banners/663238762_1399808015519114_3412210904947284787_n.jpg']],['Linh kiện',['/banners/HDD%20Western%20Digital%20Red%20Plus%204TB%20(WD40EFZZ).png','/banners/intel%20i7.png']],['Phần mềm',['/banners/759849593_1505911754908739_2896106695699517857_n.jpg','/banners/768432914_1511600697673178_2122626592133173619_n.jpg']],['Máy in',['/banners/cnhan%20min.png','/banners/epson.png']]
-] as [string,[string,string]][];
-const data:Record<Company,[string,[string,string]][]>={'Nguyên Kim':NK,'Chính Nhân':CN};
-const blank=():Answer=>({good:[],improve:[],other:'',note:''});
-const initial:Draft={name:'',department:'',company:'',answers:{},global:''};
-const endpoint='https://script.google.com/macros/s/AKfycbzOEmCT-VvR_TDJ-ycWrOKiahjjOxIUL7ddas69u_0y_FtrLe67s0vILxoTR9sszZCR/exec';
-const key=(company:string,name:string)=>company+' • '+name;
+type Company = 'Nguyên Kim' | 'Chính Nhân' | 'Kết Nối Thông Minh';
+type Answer = { score?: number; firstImpression?: string; messageClarity?: string; good: string[]; improve: string[]; other: string; note: string };
+type Draft = { name: string; department: string; company: Company | ''; answers: Record<string, Answer>; firstWebsiteNeed?: string; textAmount?: string; clickIntent?: string; global: string };
+type Group = { name: string; images: [string, string] };
 
-function Radios({items,value,set,label}:{items:string[];value?:string;set:(v:string)=>void;label:string}){return <div className="radio-cards" role="radiogroup" aria-label={label}>{items.map(x=><button type="button" role="radio" aria-checked={value===x} className={value===x?'on':''} key={x} onClick={()=>set(x)}>{value===x&&<Check size={15}/>}<span>{x}</span></button>)}</div>}
-function Multi({items,value,set,exclusive}:{items:string[];value:string[];set:(v:string[])=>void;exclusive:string}){const toggle=(x:string)=>{if(x===exclusive)return set(value.includes(x)?[]:[x]);const v=value.includes(x)?value.filter(y=>y!==x):[...value.filter(y=>y!==exclusive),x];if(v.length<=2)set(v)};return <div className="chips compact">{items.map(x=><button type="button" className={value.includes(x)?'on':''} aria-pressed={value.includes(x)} key={x} onClick={()=>toggle(x)}>{value.includes(x)&&<Check size={14}/>} {x}</button>)}</div>}
+const departments = ['Marketing', 'Kinh doanh', 'PM Online', 'Mua hàng', 'Kỹ thuật', 'HCNS', 'Khác'];
+const firstImpressions = ['Sản phẩm', 'Giá / Khuyến mãi', 'Nội dung chính', 'Màu sắc / Hình ảnh', 'Thương hiệu', 'Không có gì nổi bật'];
+const clarityOptions = ['Hiểu ngay', 'Hiểu nhưng phải nhìn thêm', 'Hơi khó hiểu', 'Không hiểu rõ'];
+const goodOptions = ['Sản phẩm nổi bật', 'Màu sắc đẹp', 'Dễ đọc', 'Nội dung rõ ràng', 'Giá / Khuyến mãi nổi bật', 'Nhìn hiện đại', 'Nhận diện thương hiệu rõ', 'Không có điểm nào đặc biệt'];
+const improveOptions = ['Làm sản phẩm nổi bật hơn', 'Giảm bớt chữ', 'Làm nội dung dễ hiểu hơn', 'Làm giá / Khuyến mãi nổi bật hơn', 'Màu sắc thu hút hơn', 'Sắp xếp lại cho dễ nhìn', 'Làm thương hiệu rõ hơn', 'Không cần chỉnh', 'Khác'];
+const scoreLevels = [
+  ['Chưa đạt', 'Khó hiểu / chưa thu hút'],
+  ['Cần cải thiện', 'Có ý nhưng còn nhiều điểm chưa ổn'],
+  ['Đạt', 'Dễ hiểu / có thể sử dụng'],
+  ['Tốt', 'Rõ ràng / đẹp / khá thu hút'],
+  ['Rất tốt', 'Nổi bật / dễ hiểu / tạo ấn tượng ngay'],
+] as const;
+const websiteFirst = ['Sản phẩm', 'Giá', 'Khuyến mãi', 'Điểm nổi bật của sản phẩm', 'Thương hiệu', 'Nút xem thêm / mua hàng'];
+const textAmounts = ['Quá nhiều', 'Hơi nhiều', 'Vừa đủ', 'Có thể thêm thông tin'];
+const clickIntents = ['Rất muốn', 'Có thể', 'Không chắc', 'Không muốn'];
 
-export default function Home(){
- const [draft,setDraft]=useState<Draft>(initial),[ready,setReady]=useState(false),[welcome,setWelcome]=useState(true),[errors,setErrors]=useState<string[]>([]),[message,setMessage]=useState(''),[photo,setPhoto]=useState<string|null>(null),[sending,setSending]=useState(false),[done,setDone]=useState(false);
- useEffect(()=>{try{const saved=localStorage.getItem('nkc-banner-review-final');if(saved){const d=JSON.parse(saved);setDraft({...initial,...d,answers:d.answers||{}});setWelcome(!(d.name&&d.department&&d.company))}}catch{}setReady(true)},[]);
- useEffect(()=>{if(ready)localStorage.setItem('nkc-banner-review-final',JSON.stringify(draft))},[draft,ready]);
- useEffect(()=>{const close=(e:KeyboardEvent)=>e.key==='Escape'&&setPhoto(null);addEventListener('keydown',close);return()=>removeEventListener('keydown',close)},[]);
- useEffect(()=>{const base=process.env.NEXT_PUBLIC_BASE_PATH||'';if(base)document.querySelectorAll('img[src^="/banners/"],img[src="/nkc-logo.png"]').forEach(i=>i.setAttribute('src',base+i.getAttribute('src')))},[draft.company,photo]);
- const cats=draft.company?data[draft.company]:[];
- const answer=(name:string)=>draft.answers[key(draft.company,name)]||blank();
- const patch=(name:string,change:Partial<Answer>)=>setDraft(d=>({...d,answers:{...d.answers,[key(d.company,name)]:{...blank(),...d.answers[key(d.company,name)],...change}}}));
- const complete=(name:string)=>{const a=answer(name);return !!(a.firstImpression&&a.messageClarity&&a.score)};
- const rated=useMemo(()=>cats.filter(([n])=>complete(n)).length,[cats,draft.answers,draft.company]);
- const validate=()=>{const list:string[]=[];if(!draft.name||!draft.department||!draft.company)list.push('profile');cats.forEach(([n])=>{const a=answer(n);if(!a.firstImpression)list.push('first-'+n);else if(!a.messageClarity)list.push('clarity-'+n);else if(!a.score)list.push('score-'+n)});setErrors(list);if(list.length){document.getElementById(list[0])?.scrollIntoView({behavior:'smooth',block:'center'});setMessage('Vui lòng chọn một đáp án ở mục được đánh dấu.');return false}return true};
- const submit=async()=>{if(sending||!validate())return;setSending(true);try{const payload={timestamp:new Date().toISOString(),name:draft.name,department:draft.department,company:draft.company,categories:cats.map(([n])=>({category:n,...answer(n)})),firstWebsiteNeed:draft.firstWebsiteNeed||'',textAmount:draft.textAmount||'',clickIntent:draft.clickIntent||'',globalNote:draft.global};const token=crypto.randomUUID();await new Promise<void>((resolve,reject)=>{const name='nkc-sheet-submit';let frame=document.querySelector<HTMLIFrameElement>('iframe[name="'+name+'"]');if(!frame){frame=document.createElement('iframe');frame.name=name;frame.hidden=true;document.body.appendChild(frame)}const form=document.createElement('form');form.method='POST';form.action=endpoint;form.target=name;form.hidden=true;[['payload',JSON.stringify(payload)],['token',token]].forEach(([n,v])=>{const input=document.createElement('input');input.name=n;input.value=v;form.appendChild(input)});document.body.appendChild(form);const clean=()=>{window.removeEventListener('message',listener);form.remove()};const timeout=window.setTimeout(()=>{clean();reject(new Error('timeout'))},15000);const listener=(e:MessageEvent)=>{const r=e.data;if(r?.source!=='nkc-banner-survey'||r?.token!==token)return;clearTimeout(timeout);clean();r.ok?resolve():reject(new Error(r.error||'failed'))};window.addEventListener('message',listener);form.submit()});localStorage.removeItem('nkc-banner-review-final');setDone(true)}catch{setMessage('Chưa thể xác nhận dữ liệu đã được lưu. Vui lòng thử lại.');setSending(false)}};
- return <main className={'survey '+(draft.company==='Nguyên Kim'?'nk':'cn')}><header><div className="bar"><div className="brand"><img src="/nkc-logo.png" alt="NKC"/><span>KHẢO SÁT BANNER 2026<small>Đánh giá nội bộ</small></span></div>{draft.company&&<div className="progress"><b>Đã đánh giá {rated}/{cats.length} ngành hàng</b><i><em style={{width:(rated/cats.length*100)+'%'}}/></i></div>}</div></header><div className="wrap"><section className="hero"><p>ĐÁNH GIÁ BANNER WEBSITE</p><h1>Xem nhanh, góp ý dễ.</h1><span>Mỗi ngành hàng có 2 banner. Bạn chỉ cần đánh giá chung một lần.</span></section><section id="profile" className={'card profile '+(errors.includes('profile')?'error':'')}><div className="head"><div><p>THÔNG TIN</p><h2>Người đánh giá</h2></div><button className="edit-profile" type="button" onClick={()=>setWelcome(true)}>Chỉnh sửa</button></div><div className="profile-summary"><span>{draft.name||'Chưa nhập tên'}</span><span>{draft.department||'Chưa chọn phòng ban'}</span><span>{draft.company||'Chưa chọn công ty'}</span></div></section>{draft.company?<><nav className="nav">{cats.map(([n])=><button type="button" key={n} className={complete(n)?'complete':''} onClick={()=>document.getElementById('cat-'+n)?.scrollIntoView({behavior:'smooth',block:'start'})}>{complete(n)?<Check size={14}/>:<i>•</i>}{n}</button>)}</nav><div className="stack">{cats.map(([n,images],index)=>{const a=answer(n);return <section id={'cat-'+n} className={'card category '+(errors.some(x=>x.endsWith(n))?'error':'')} key={n}><div className="category-head"><div><p>NGÀNH HÀNG {String(index+1).padStart(2,'0')}</p><h2>{n}</h2><span>Xem cả hai banner trước khi trả lời.</span></div><small>{complete(n)?<><Check size={14}/> Đã đánh giá</>:'Chưa đánh giá'}</small></div><div className="banners">{images.map((image,i)=><button type="button" className="banner" key={image} onClick={()=>setPhoto(image)}><b>OPTION 0{i+1}</b><div><img src={image} alt={'Banner '+(i+1)+' '+n} loading="lazy"/></div><small>Nhấn để xem ảnh lớn</small></button>)}</div><div id={'first-'+n} className="question"><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={first} value={a.firstImpression} label="3 giây đầu" set={v=>{patch(n,{firstImpression:v});setErrors(e=>e.filter(x=>x!=='first-'+n))}}/>{errors.includes('first-'+n)&&<em className="invalid">Vui lòng chọn một đáp án.</em>}</div><div id={'clarity-'+n} className="question"><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarity} value={a.messageClarity} label="Mức độ hiểu" set={v=>{patch(n,{messageClarity:v});setErrors(e=>e.filter(x=>x!=='clarity-'+n))}}/>{errors.includes('clarity-'+n)&&<em className="invalid">Vui lòng chọn một đáp án.</em>}</div><div id={'score-'+n} className="question"><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{levels.map(([label,desc],i)=><button type="button" className={a.score===i+1?'on':''} aria-pressed={a.score===i+1} key={label} onClick={()=>{patch(n,{score:i+1});setErrors(e=>e.filter(x=>x!=='score-'+n))}}><strong>{i+1}</strong><span>{label}</span><small>{desc}</small></button>)}</div>{errors.includes('score-'+n)&&<em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div><div className="question"><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={good} value={a.good} set={v=>patch(n,{good:v})} exclusive="Không có điểm nào đặc biệt"/></div><div className="question"><h3><i>05</i>Bạn muốn banner được chỉnh gì nhất?</h3><p>Chọn tối đa 2.</p><Multi items={improve} value={a.improve} set={v=>patch(n,{improve:v})} exclusive="Không cần chỉnh"/>{a.improve.includes('Khác')&&<label className="other">Bạn muốn chỉnh gì khác?<input value={a.other} onChange={e=>patch(n,{other:e.target.value})} placeholder="Mô tả ngắn ý bạn"/></label>}</div><div className="question"><h3><i>06</i>Nếu chỉ được sửa 1 điều, bạn muốn sửa gì?</h3><textarea rows={3} value={a.note} onChange={e=>patch(n,{note:e.target.value})} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..."/></div></section>})}</div><section className="card final"><div className="head"><div><p>GÓP Ý CHUNG</p><h2>Góp ý chung</h2></div></div><div className="question"><h3>Khi xem banner trên website, bạn thường muốn thấy điều gì đầu tiên?</h3><Radios items={webFirst} value={draft.firstWebsiteNeed} label="Điều muốn thấy" set={v=>setDraft(d=>({...d,firstWebsiteNeed:v}))}/></div><div className="question"><h3>Bạn thấy lượng chữ trên banner hiện nay thế nào?</h3><Radios items={textAmount} value={draft.textAmount} label="Lượng chữ" set={v=>setDraft(d=>({...d,textAmount:v}))}/></div><div className="question"><h3>Banner hiện tại có khiến bạn muốn bấm vào xem sản phẩm không?</h3><Radios items={clickIntent} value={draft.clickIntent} label="Ý định click" set={v=>setDraft(d=>({...d,clickIntent:v}))}/></div><div className="question"><h3>Bạn muốn banner website trong thời gian tới thay đổi điều gì nhất?</h3><textarea rows={3} value={draft.global} onChange={e=>setDraft(d=>({...d,global:e.target.value}))} placeholder="Chia sẻ điều bạn muốn Marketing cải thiện..."/></div><button type="button" className="submit" onClick={submit} disabled={sending}>{sending?'ĐANG GỬI ĐÁNH GIÁ...':<><Send size={17}/> GỬI ĐÁNH GIÁ</>}</button><p className="thanks">Cảm ơn bạn đã dành thời gian góp ý để Marketing hoàn thiện banner website.</p></section></>:<section className="card empty"><h2>Chọn công ty để bắt đầu</h2><p>Website chỉ hiển thị banner thuộc công ty bạn chọn.</p></section>}</div>{welcome&&<div className="welcome" role="dialog" aria-modal="true" aria-label="Bắt đầu khảo sát"><section><img className="welcome-logo" src="/nkc-logo.png" alt="NKC"/><p>KHẢO SÁT BANNER 2026</p><h2>Bắt đầu đánh giá</h2><span>Điền thông tin một lần, sau đó xem banner và trả lời ngắn gọn.</span><label>Họ và tên <b>*</b><input autoFocus value={draft.name} onChange={e=>setDraft(d=>({...d,name:e.target.value}))} placeholder="Nhập họ và tên"/></label><label>Phòng ban <b>*</b><select value={draft.department} onChange={e=>setDraft(d=>({...d,department:e.target.value}))}><option value="">Chọn phòng ban</option>{departments.map(x=><option key={x}>{x}</option>)}</select></label><div className="welcome-company"><label>Công ty <b>*</b></label><div className="companies">{(['Nguyên Kim','Chính Nhân'] as Company[]).map(x=><button type="button" key={x} className={draft.company===x?'on':''} onClick={()=>setDraft(d=>({...d,company:x}))}><strong>{x}</strong><small>{x==='Nguyên Kim'?'Vi Tính Nguyên Kim':'Công Nghệ Chính Nhân'}</small></button>)}</div></div><button className="start" type="button" onClick={()=>draft.name&&draft.department&&draft.company?setWelcome(false):setMessage('Vui lòng nhập tên, phòng ban và chọn công ty.')}>BẮT ĐẦU KHẢO SÁT</button></section></div>}{message&&<button className="toast" onClick={()=>setMessage('')}>{message}<X size={16}/></button>}{photo&&<div className="lightbox" role="dialog" aria-modal="true" onMouseDown={()=>setPhoto(null)}><button onClick={()=>setPhoto(null)} aria-label="Đóng ảnh lớn"><X/></button><img src={photo} alt="Banner xem lớn" onMouseDown={e=>e.stopPropagation()}/></div>}{done&&<div className="success"><div><Check size={30}/><h2>Cảm ơn bạn đã hoàn thành khảo sát!</h2><p>Ý kiến của bạn đã được ghi nhận và sẽ được dùng để cải thiện banner tiếp theo.</p></div></div>}</main>
+const data: Record<Company, Group[]> = {
+  'Nguyên Kim': [
+    { name: 'Laptop', images: ['/banners/4.png', '/banners/731761836_1660404446092190_8940495999503197811_n.jpg'] },
+    { name: 'PC', images: ['/banners/3.png', '/banners/747625327_1674673154665319_3302438534809789923_n.jpg'] },
+    { name: 'LCD / Màn hình', images: ['/banners/616811699_1511266151006021_9046361683076941228_n.jpg', '/banners/666047947_1583526670446635_3788494658393941418_n.jpg'] },
+    { name: 'Phụ kiện', images: ['/banners/611256711_1326692079497375_270400890844479602_n.jpg', '/banners/663238762_1399808015519114_3412210904947284787_n.jpg'] },
+    { name: 'Linh kiện', images: ['/banners/1788936265228_201525182566124453_7011973515233209377_edb5b45b607ea665f81233fcaa32c182.jpg', '/banners/672681412_1591893246276644_3636714957270481989_n.jpg'] },
+    { name: 'Phần mềm', images: ['/banners/8.png', '/banners/Lightroom%20w%20Classic.png'] },
+    { name: 'Máy in', images: ['/banners/1788860801422_201525182566124453_7011973515233209377_bedf5f81fd6617aa51f977aa1b4521fb.jpg', '/banners/6.png'] },
+  ],
+  'Chính Nhân': [
+    { name: 'Laptop', images: ['/banners/IdeaPad%20Slim%203%20-%20Copy.jpg', '/banners/Lenovo%20LOQ%20Essential.jpg'] },
+    { name: 'PC', images: ['/banners/767483411_1513397350826846_8996851914196950690_n.jpg', '/banners/OP2q.png'] },
+    { name: 'LCD / Màn hình', images: ['/banners/Asus%20ProArt.png', '/banners/viewsonic.png'] },
+    { name: 'Phụ kiện', images: ['/banners/611256711_1326692079497375_270400890844479602_n.jpg', '/banners/663238762_1399808015519114_3412210904947284787_n.jpg'] },
+    { name: 'Linh kiện', images: ['/banners/HDD%20Western%20Digital%20Red%20Plus%204TB%20(WD40EFZZ).png', '/banners/intel%20i7.png'] },
+    { name: 'Phần mềm', images: ['/banners/759849593_1505911754908739_2896106695699517857_n.jpg', '/banners/768432914_1511600697673178_2122626592133173619_n.jpg'] },
+    { name: 'Máy in', images: ['/banners/cnhan%20min.png', '/banners/epson.png'] },
+  ],
+  'Kết Nối Thông Minh': [
+    { name: 'Aqara', images: ['/banners/aqara-01.jpg', '/banners/aqara-02.jpg'] },
+    { name: 'EcoFlow', images: ['/banners/ecoflow-01.jpg', '/banners/ecoflow-02.jpg'] },
+    { name: 'Wanbo', images: ['/banners/wanbo-01.jpg', '/banners/wanbo-02.jpg'] },
+  ],
+};
+
+const endpoint = 'https://script.google.com/macros/s/AKfycbzOEmCT-VvR_TDJ-ycWrOKiahjjOxIUL7ddas69u_0y_FtrLe67s0vILxoTR9sszZCR/exec';
+const blank = (): Answer => ({ good: [], improve: [], other: '', note: '' });
+const initial: Draft = { name: '', department: '', company: '', answers: {}, global: '' };
+const itemKey = (company: string, name: string) => company + ' • ' + name;
+const getCompanyTheme = (company: Draft['company']) => company === 'Nguyên Kim' ? 'nk' : company === 'Chính Nhân' ? 'cn' : company === 'Kết Nối Thông Minh' ? 'smc' : '';
+
+function Radios({ items, value, onChange, label }: { items: string[]; value?: string; onChange: (value: string) => void; label: string }) {
+  return <div className="radio-cards" role="radiogroup" aria-label={label}>{items.map(item =>
+    <button type="button" role="radio" aria-checked={value === item} className={value === item ? 'on' : ''} key={item} onClick={() => onChange(item)}>
+      {value === item && <Check size={15} />}<span>{item}</span>
+    </button>
+  )}</div>;
+}
+
+function Multi({ items, value, onChange, exclusive }: { items: string[]; value: string[]; onChange: (value: string[]) => void; exclusive: string }) {
+  const toggle = (item: string) => {
+    if (item === exclusive) return onChange(value.includes(item) ? [] : [item]);
+    const next = value.includes(item) ? value.filter(x => x !== item) : [...value.filter(x => x !== exclusive), item];
+    if (next.length <= 2) onChange(next);
+  };
+  return <div className="chips compact">{items.map(item =>
+    <button type="button" className={value.includes(item) ? 'on' : ''} aria-pressed={value.includes(item)} key={item} onClick={() => toggle(item)}>
+      {value.includes(item) && <Check size={14} />} {item}
+    </button>
+  )}</div>;
+}
+
+export default function Home() {
+  const [draft, setDraft] = useState<Draft>(initial);
+  const [ready, setReady] = useState(false);
+  const [welcome, setWelcome] = useState(true);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [message, setMessage] = useState('');
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('nkc-banner-review-final');
+      if (saved) {
+        const parsed = JSON.parse(saved) as Draft;
+        setDraft({ ...initial, ...parsed, answers: parsed.answers || {} });
+        setWelcome(!(parsed.name && parsed.department && parsed.company));
+      }
+    } catch {}
+    setReady(true);
+  }, []);
+  useEffect(() => { if (ready) localStorage.setItem('nkc-banner-review-final', JSON.stringify(draft)); }, [draft, ready]);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => event.key === 'Escape' && setPhoto(null);
+    addEventListener('keydown', close);
+    return () => removeEventListener('keydown', close);
+  }, []);
+  useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    if (base) document.querySelectorAll('img[src^="/banners/"],img[src="/nkc-logo.png"]').forEach(image => image.setAttribute('src', base + image.getAttribute('src')));
+  }, [draft.company, photo]);
+
+  const groups = draft.company ? data[draft.company] : [];
+  const answer = (name: string) => draft.answers[itemKey(draft.company, name)] || blank();
+  const patch = (name: string, change: Partial<Answer>) => setDraft(current => ({
+    ...current,
+    answers: { ...current.answers, [itemKey(current.company, name)]: { ...blank(), ...current.answers[itemKey(current.company, name)], ...change } },
+  }));
+  const complete = (name: string) => {
+    const current = answer(name);
+    return Boolean(current.firstImpression && current.messageClarity && current.score);
+  };
+  const rated = useMemo(() => groups.filter(group => complete(group.name)).length, [groups, draft.answers, draft.company]);
+
+  const validate = () => {
+    const next: string[] = [];
+    if (!draft.name || !draft.department || !draft.company) next.push('profile');
+    groups.forEach(group => {
+      const current = answer(group.name);
+      if (!current.firstImpression) next.push('first-' + group.name);
+      else if (!current.messageClarity) next.push('clarity-' + group.name);
+      else if (!current.score) next.push('score-' + group.name);
+    });
+    setErrors(next);
+    if (next.length) {
+      document.getElementById(next[0])?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setMessage('Vui lòng chọn một đáp án ở mục được đánh dấu.');
+      return false;
+    }
+    return true;
+  };
+
+  const submit = async () => {
+    if (sending || !validate()) return;
+    setSending(true);
+    try {
+      const payload = {
+        timestamp: new Date().toISOString(), name: draft.name, department: draft.department, company: draft.company,
+        categories: groups.map(group => ({ category: group.name, ...answer(group.name) })),
+        firstWebsiteNeed: draft.firstWebsiteNeed || '', textAmount: draft.textAmount || '', clickIntent: draft.clickIntent || '', globalNote: draft.global,
+      };
+      const token = crypto.randomUUID();
+      await new Promise<void>((resolve, reject) => {
+        const frameName = 'nkc-sheet-submit';
+        let frame = document.querySelector<HTMLIFrameElement>('iframe[name="' + frameName + '"]');
+        if (!frame) { frame = document.createElement('iframe'); frame.name = frameName; frame.hidden = true; document.body.appendChild(frame); }
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = endpoint; form.target = frameName; form.hidden = true;
+        [['payload', JSON.stringify(payload)], ['token', token]].forEach(([name, value]) => { const input = document.createElement('input'); input.name = name; input.value = value; form.appendChild(input); });
+        document.body.appendChild(form);
+        const clean = () => { window.removeEventListener('message', listener); form.remove(); };
+        const timeout = window.setTimeout(() => { clean(); reject(new Error('timeout')); }, 15000);
+        const listener = (event: MessageEvent) => {
+          const result = event.data;
+          if (result?.source !== 'nkc-banner-survey' || result?.token !== token) return;
+          clearTimeout(timeout); clean(); result.ok ? resolve() : reject(new Error(result.error || 'failed'));
+        };
+        window.addEventListener('message', listener); form.submit();
+      });
+      localStorage.removeItem('nkc-banner-review-final'); setDone(true);
+    } catch { setMessage('Chưa thể xác nhận dữ liệu đã được lưu. Vui lòng thử lại.'); setSending(false); }
+  };
+
+  return <main className={'survey ' + getCompanyTheme(draft.company)}>
+    <header><div className="bar">
+      <div className="brand"><img src="/nkc-logo.png" alt="NKC" /><span>KHẢO SÁT BANNER 2026<small>Đánh giá nội bộ</small></span></div>
+      {draft.company && <div className="progress"><b>Đã đánh giá {rated}/{groups.length} nhóm</b><i><em style={{ width: (rated / groups.length * 100) + '%' }} /></i></div>}
+    </div></header>
+    <div className="wrap">
+      <section className="hero"><p>ĐÁNH GIÁ BANNER WEBSITE</p><h1>Xem nhanh, góp ý dễ.</h1><span>Mỗi nhóm có 2 banner. Bạn chỉ cần đánh giá chung một lần.</span></section>
+      <section id="profile" className={'card profile ' + (errors.includes('profile') ? 'error' : '')}>
+        <div className="head"><div><p>THÔNG TIN</p><h2>Người đánh giá</h2></div><button className="edit-profile" type="button" onClick={() => setWelcome(true)}>Chỉnh sửa</button></div>
+        <div className="profile-summary"><span>{draft.name || 'Chưa nhập tên'}</span><span>{draft.department || 'Chưa chọn phòng ban'}</span><span>{draft.company || 'Chưa chọn công ty'}</span></div>
+      </section>
+      {draft.company ? <>
+        <nav className="nav">{groups.map(group => <button type="button" key={group.name} className={complete(group.name) ? 'complete' : ''} onClick={() => document.getElementById('group-' + group.name)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{complete(group.name) ? <Check size={14} /> : <i>•</i>}{group.name}</button>)}</nav>
+        <div className="stack">{groups.map((group, index) => {
+          const current = answer(group.name);
+          return <section id={'group-' + group.name} className={'card category ' + (errors.some(error => error.endsWith(group.name)) ? 'error' : '')} key={group.name}>
+            <div className="category-head"><div><p>NHÓM BANNER {String(index + 1).padStart(2, '0')}</p><h2>{group.name}</h2><span>Xem cả hai banner trước khi trả lời.</span></div><small>{complete(group.name) ? <><Check size={14} /> Đã đánh giá</> : 'Chưa đánh giá'}</small></div>
+            <div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={image} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="lazy" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div>
+            <div id={'first-' + group.name} className="question"><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
+            <div id={'clarity-' + group.name} className="question"><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
+            <div id={'score-' + group.name} className="question"><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>
+            <div className="question"><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
+            <div className="question"><h3><i>05</i>Bạn muốn banner được chỉnh gì nhất?</h3><p>Chọn tối đa 2.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Bạn muốn chỉnh gì khác?<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Mô tả ngắn ý bạn" /></label>}</div>
+            <div className="question"><h3><i>06</i>Nếu chỉ được sửa 1 điều, bạn muốn sửa gì?</h3><textarea rows={3} value={current.note} onChange={event => patch(group.name, { note: event.target.value })} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..." /></div>
+          </section>;
+        })}</div>
+        <section className="card final"><div className="head"><div><p>GÓP Ý CHUNG</p><h2>Góp ý chung</h2></div></div>
+          <div className="question"><h3>Khi xem banner trên website, bạn thường muốn thấy điều gì đầu tiên?</h3><Radios items={websiteFirst} value={draft.firstWebsiteNeed} label="Điều muốn thấy" onChange={firstWebsiteNeed => setDraft(current => ({ ...current, firstWebsiteNeed }))} /></div>
+          <div className="question"><h3>Bạn thấy lượng chữ trên banner hiện nay thế nào?</h3><Radios items={textAmounts} value={draft.textAmount} label="Lượng chữ" onChange={textAmount => setDraft(current => ({ ...current, textAmount }))} /></div>
+          <div className="question"><h3>Banner hiện tại có khiến bạn muốn bấm vào xem sản phẩm không?</h3><Radios items={clickIntents} value={draft.clickIntent} label="Ý định click" onChange={clickIntent => setDraft(current => ({ ...current, clickIntent }))} /></div>
+          <div className="question"><h3>Bạn muốn banner website trong thời gian tới thay đổi điều gì nhất?</h3><textarea rows={3} value={draft.global} onChange={event => setDraft(current => ({ ...current, global: event.target.value }))} placeholder="Chia sẻ điều bạn muốn Marketing cải thiện..." /></div>
+          <button type="button" className="submit" onClick={submit} disabled={sending}>{sending ? 'ĐANG GỬI ĐÁNH GIÁ...' : <><Send size={17} /> GỬI ĐÁNH GIÁ</>}</button><p className="thanks">Cảm ơn bạn đã dành thời gian góp ý để Marketing hoàn thiện banner website.</p>
+        </section>
+      </> : <section className="card empty"><h2>Chọn công ty để bắt đầu</h2><p>Website chỉ hiển thị banner thuộc công ty bạn chọn.</p></section>}
+    </div>
+    {welcome && <div className="welcome" role="dialog" aria-modal="true" aria-label="Bắt đầu khảo sát"><section>
+      <img className="welcome-logo" src="/nkc-logo.png" alt="NKC" /><p>KHẢO SÁT BANNER 2026</p><h2>Bắt đầu đánh giá</h2><span>Điền thông tin một lần, sau đó xem banner và trả lời ngắn gọn.</span>
+      <label>Họ và tên <b>*</b><input autoFocus value={draft.name} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} placeholder="Nhập họ và tên" /></label>
+      <label>Phòng ban <b>*</b><select value={draft.department} onChange={event => setDraft(current => ({ ...current, department: event.target.value }))}><option value="">Chọn phòng ban</option>{departments.map(department => <option key={department}>{department}</option>)}</select></label>
+      <div className="welcome-company"><label>Công ty <b>*</b></label><div className="companies">{([
+        ['Nguyên Kim', 'Vi Tính Nguyên Kim'], ['Chính Nhân', 'Công Nghệ Chính Nhân'], ['Kết Nối Thông Minh', 'SMC'],
+      ] as [Company, string][]).map(([company, subtitle]) => <button type="button" key={company} className={draft.company === company ? 'on' : ''} onClick={() => setDraft(current => ({ ...current, company }))}><strong>{company}</strong><small>{subtitle}</small></button>)}</div></div>
+      <button className="start" type="button" onClick={() => draft.name && draft.department && draft.company ? setWelcome(false) : setMessage('Vui lòng nhập tên, phòng ban và chọn công ty.')}>BẮT ĐẦU KHẢO SÁT</button>
+    </section></div>}
+    {message && <button className="toast" onClick={() => setMessage('')}>{message}<X size={16} /></button>}
+    {photo && <div className="lightbox" role="dialog" aria-modal="true" onMouseDown={() => setPhoto(null)}><button onClick={() => setPhoto(null)} aria-label="Đóng ảnh lớn"><X /></button><img src={photo} alt="Banner xem lớn" onMouseDown={event => event.stopPropagation()} /></div>}
+    {done && <div className="success"><div><Check size={30} /><h2>Cảm ơn bạn đã hoàn thành khảo sát!</h2><p>Ý kiến của bạn đã được ghi nhận và sẽ được dùng để cải thiện banner tiếp theo.</p></div></div>}
+  </main>;
 }
