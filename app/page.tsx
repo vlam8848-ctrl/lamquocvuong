@@ -55,6 +55,7 @@ const blank = (): Answer => ({ good: [], improve: [], other: '', note: '' });
 const initial: Draft = { name: '', department: '', company: '', answers: {}, global: '' };
 const itemKey = (company: string, name: string) => company + ' • ' + name;
 const getCompanyTheme = (company: Draft['company']) => company === 'Nguyên Kim' ? 'nk' : company === 'Chính Nhân' ? 'cn' : company === 'Kết Nối Thông Minh' ? 'smc' : '';
+const asset = (path: string) => import.meta.env.BASE_URL + path.replace(/^\//, '');
 
 function Radios({ items, value, onChange, label }: { items: string[]; value?: string; onChange: (value: string) => void; label: string }) {
   return <div className="radio-cards" role="radiogroup" aria-label={label}>{items.map(item =>
@@ -105,11 +106,6 @@ export default function Home() {
     addEventListener('keydown', close);
     return () => removeEventListener('keydown', close);
   }, []);
-  useEffect(() => {
-    const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
-    if (base) document.querySelectorAll('img[src^="/banners/"],img[src="/nkc-logo.png"]').forEach(image => image.setAttribute('src', base + image.getAttribute('src')));
-  }, [draft.company, photo]);
-
   const groups = draft.company ? data[draft.company] : [];
   const currentStep = Math.min(Math.max(draft.currentStep || 0, 0), groups.length);
   const answer = (name: string) => draft.answers[itemKey(draft.company, name)] || blank();
@@ -192,7 +188,7 @@ export default function Home() {
 
   return <main className={'survey ' + getCompanyTheme(draft.company)}>
     <header><div className="bar">
-      <div className="brand"><img src="/nkc-logo.png" alt="NKC" /><span>KHẢO SÁT BANNER 2026<small>Đánh giá nội bộ</small></span></div>
+      <div className="brand"><img src={asset('/nkc-logo.png')} alt="NKC" /><span>KHẢO SÁT BANNER 2026<small>Đánh giá nội bộ</small></span></div>
       {draft.company && <div className="progress"><b>Đã đánh giá {rated}/{groups.length} nhóm</b><i><em style={{ width: (rated / groups.length * 100) + '%' }} /></i></div>}
     </div></header>
     <div className="wrap">
@@ -211,7 +207,7 @@ export default function Home() {
             const expanded = extraOpen[group.name] ?? hasExtra;
             return <section className={'card category step-card ' + (errors.some(error => error.endsWith(group.name)) ? 'error' : '')}>
               <div className="category-head"><div><p>NHÓM BANNER {String(currentStep + 1).padStart(2, '0')} / {String(groups.length).padStart(2, '0')}</p><h2>{group.name}</h2><span>2 banner · 1 đánh giá chung</span></div><small>{complete(group.name) ? <><Check size={14} /> Đã đánh giá</> : 'Chưa đánh giá'}</small></div>
-              <div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={image} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="lazy" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div>
+              <div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={asset(image)} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="eager" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div>
               <div id={'first-' + group.name} className={'question ' + (!current.firstImpression ? '' : 'answered')}><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
               <div id={'clarity-' + group.name} className={'question ' + (current.firstImpression && !current.messageClarity ? 'guided' : '')}><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
               <div id={'score-' + group.name} className={'question ' + (current.messageClarity && !current.score ? 'guided' : '')}><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>
@@ -233,7 +229,7 @@ export default function Home() {
       </> : <section className="card empty"><h2>Chọn công ty để bắt đầu</h2><p>Website chỉ hiển thị banner thuộc công ty bạn chọn.</p></section>}
     </div>
     {welcome && <div className="welcome" role="dialog" aria-modal="true" aria-label="Bắt đầu khảo sát"><section>
-      <img className="welcome-logo" src="/nkc-logo.png" alt="NKC" /><p>KHẢO SÁT BANNER 2026</p><h2>Bắt đầu đánh giá</h2><span>Điền thông tin một lần, sau đó xem banner và trả lời ngắn gọn.</span>
+      <img className="welcome-logo" src={asset('/nkc-logo.png')} alt="NKC" /><p>KHẢO SÁT BANNER 2026</p><h2>Bắt đầu đánh giá</h2><span>Điền thông tin một lần, sau đó xem banner và trả lời ngắn gọn.</span>
       <label>Họ và tên <b>*</b><input autoFocus value={draft.name} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} placeholder="Nhập họ và tên" /></label>
       <label>Phòng ban <b>*</b><input list="department-options" value={draft.department} onChange={event => setDraft(current => ({ ...current, department: event.target.value }))} placeholder="Nhập hoặc chọn phòng ban" /><datalist id="department-options">{departments.map(department => <option value={department} key={department} />)}</datalist></label>
       <div className="welcome-company"><label>Công ty <b>*</b></label><div className="companies">{([
@@ -242,7 +238,7 @@ export default function Home() {
       <button className="start" type="button" onClick={() => draft.name.trim() && draft.department.trim() && draft.company ? setWelcome(false) : setMessage(!draft.department.trim() ? 'Vui lòng nhập phòng ban.' : 'Vui lòng nhập tên và chọn công ty.')}>BẮT ĐẦU KHẢO SÁT</button>
     </section></div>}
     {message && <button className="toast" onClick={() => setMessage('')}>{message}<X size={16} /></button>}
-    {photo && <div className="lightbox" role="dialog" aria-modal="true" onMouseDown={() => setPhoto(null)}><button onClick={() => setPhoto(null)} aria-label="Đóng ảnh lớn"><X /></button><img src={photo} alt="Banner xem lớn" onMouseDown={event => event.stopPropagation()} /></div>}
+    {photo && <div className="lightbox" role="dialog" aria-modal="true" onMouseDown={() => setPhoto(null)}><button onClick={() => setPhoto(null)} aria-label="Đóng ảnh lớn"><X /></button><img src={asset(photo)} alt="Banner xem lớn" onMouseDown={event => event.stopPropagation()} /></div>}
     {done && <div className="success"><div><Check size={30} /><h2>Cảm ơn bạn đã hoàn thành khảo sát!</h2><p>Ý kiến của bạn đã được ghi nhận và sẽ được dùng để cải thiện banner tiếp theo.</p></div></div>}
   </main>;
 }
