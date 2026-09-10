@@ -75,16 +75,20 @@ function Radios({ items, value, onChange, label }: { items: string[]; value?: st
 }
 
 function Multi({ items, value, onChange, exclusive }: { items: string[]; value: string[]; onChange: (value: string[]) => void; exclusive: string }) {
+  const selected = value.includes(exclusive) ? [exclusive] : value.filter(item => item !== exclusive).slice(0, 2);
   const toggle = (item: string) => {
-    if (item === exclusive) return onChange(value.includes(item) ? [] : [item]);
-    const next = value.includes(item) ? value.filter(x => x !== item) : [...value.filter(x => x !== exclusive), item];
-    if (next.length <= 2) onChange(next);
+    if (item === exclusive) return onChange(selected.includes(item) ? [] : [item]);
+    if (selected.includes(item)) return onChange(selected.filter(choice => choice !== item));
+    if (selected.length >= 2) return;
+    onChange([...selected.filter(choice => choice !== exclusive), item]);
   };
-  return <div className="chips compact">{items.map(item =>
-    <button type="button" className={value.includes(item) ? 'on' : ''} aria-pressed={value.includes(item)} key={item} onClick={() => toggle(item)}>
-      {value.includes(item) && <Check size={14} />} {item}
-    </button>
-  )}</div>;
+  const atLimit = selected.length === 2;
+  return <><div className="chips compact">{items.map(item => {
+    const isSelected = selected.includes(item);
+    return <button type="button" className={isSelected ? 'on' : ''} aria-pressed={isSelected} disabled={atLimit && !isSelected} key={item} onClick={() => toggle(item)}>
+      {isSelected && <Check size={14} />} {item}
+    </button>;
+  })}</div>{atLimit && <small className="choice-limit" aria-live="polite">Đã chọn 2/2</small>}</>;
 }
 
 function ReviewDock({ group, groupIndex, totalGroups, answer, currentQuestion, onSelect }: { group: Group; groupIndex: number; totalGroups: number; answer: Answer; currentQuestion: number; onSelect: (question: number) => void }) {
@@ -137,7 +141,7 @@ export default function Home() {
   }));
   const complete = (name: string) => {
     const current = answer(name);
-    return Boolean(current.firstImpression && current.messageClarity && current.score && current.note.trim());
+    return Boolean(current.firstImpression && current.messageClarity && current.score);
   };
   const rated = useMemo(() => groups.filter(group => complete(group.name)).length, [groups, draft.answers, draft.company]);
 
@@ -175,10 +179,10 @@ export default function Home() {
 
   const validateGroup = (group: Group) => {
     const current = answer(group.name);
-    const missing = !current.firstImpression ? 'first-' + group.name : !current.messageClarity ? 'clarity-' + group.name : !current.score ? 'score-' + group.name : !current.note.trim() ? 'note-' + group.name : '';
+    const missing = !current.firstImpression ? 'first-' + group.name : !current.messageClarity ? 'clarity-' + group.name : !current.score ? 'score-' + group.name : '';
     if (!missing) return true;
     setErrors(items => [...items.filter(item => !item.endsWith(group.name)), missing]);
-    setMessage(missing.startsWith('note-') ? 'Vui lòng cho biết 1 điều bạn muốn sửa.' : 'Vui lòng hoàn tất các câu bắt buộc.');
+    setMessage('Vui lòng hoàn tất các câu bắt buộc.');
     document.getElementById(missing)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return false;
   };
@@ -191,7 +195,6 @@ export default function Home() {
       if (!current.firstImpression) next.push('first-' + group.name);
       else if (!current.messageClarity) next.push('clarity-' + group.name);
       else if (!current.score) next.push('score-' + group.name);
-      else if (!current.note.trim()) next.push('note-' + group.name);
     });
     setErrors(next);
     if (next.length) {
@@ -259,9 +262,9 @@ export default function Home() {
               <div id="question-0" data-question="0" className={'question question-focus ' + (currentQuestion === 0 ? 'is-current' : '')}><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
               <div id="question-1" data-question="1" className={'question question-focus ' + (currentQuestion === 1 ? 'is-current' : '')}><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
               <div id="question-2" data-question="2" className={'question question-focus ' + (currentQuestion === 2 ? 'is-current' : '')}><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>
-              <div className="extra-content"><div id="question-3" data-question="3" className={'question question-focus ' + (currentQuestion === 3 ? 'is-current' : '')}><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
-                <div id="question-4" data-question="4" className={'question question-focus ' + (currentQuestion === 4 ? 'is-current' : '')}><h3><i>05</i>Bạn muốn banner được chỉnh gì nhất?</h3><p>Chọn tối đa 2.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Bạn muốn chỉnh gì khác?<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Mô tả ngắn ý bạn" /></label>}</div>
-                <div id={'note-' + group.name} data-question="5" className={'question question-focus required-feedback ' + (currentQuestion === 5 ? 'is-current' : '')}><p className="required-label">GÓP Ý BẮT BUỘC</p><h3><i>06</i>Nếu chỉ được sửa 1 điều,{" "}bạn muốn sửa gì? <b>*</b></h3><p>Hãy ghi một thay đổi quan trọng nhất để Marketing ưu tiên cải thiện.</p><textarea rows={3} required value={current.note} onChange={event => { patch(group.name, { note: event.target.value }); setErrors(items => items.filter(item => item !== 'note-' + group.name)); }} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..." />{errors.includes('note-' + group.name) && <em className="invalid">Vui lòng nhập một góp ý.</em>}</div></div>
+              <div className="extra-content"><div id="question-3" data-question="3" className={'question question-focus ' + (currentQuestion === 3 ? 'is-current' : '')}><h3><i>04</i>Bạn thấy điểm nào của nhóm banner này đang làm tốt?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
+                <div id="question-4" data-question="4" className={'question question-focus ' + (currentQuestion === 4 ? 'is-current' : '')}><h3><i>05</i>Bạn thấy nhóm banner này cần cải thiện điểm nào?</h3><p>Chọn tối đa 2.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Ý kiến khác<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Nhập ý kiến khác" /></label>}</div>
+                <div id="question-5" data-question="5" className={'question question-focus feedback-note ' + (currentQuestion === 5 ? 'is-current' : '')}><h3><i>06</i>Đóng góp ý kiến của anh / chị để cải thiện banner</h3><textarea rows={3} value={current.note} onChange={event => patch(group.name, { note: event.target.value })} placeholder="Anh / chị có thể góp ý ngắn về nội dung, màu sắc, hình ảnh hoặc cách trình bày..." /></div></div>
               <div className="step-actions"><button type="button" className="previous" onClick={() => moveToStep(currentStep - 1)} disabled={currentStep === 0}><ChevronLeft size={17} /> Trước</button><button type="button" className="next" onClick={() => validateGroup(group) && moveToStep(currentStep + 1)}>{currentStep === groups.length - 1 ? 'Hoàn tất đánh giá' : 'Nhóm tiếp theo'} <ChevronRight size={17} /></button></div>
             </section>;
           })() : <section className="card final step-card"><div className="head"><div><p>HOÀN TẤT KHẢO SÁT</p><h2>Góp ý chung</h2><span>Thêm vài ý ngắn để Marketing cải thiện banner tốt hơn.</span></div></div>

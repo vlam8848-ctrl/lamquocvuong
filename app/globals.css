@@ -103,3 +103,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand-primary);box-sh
 .survey .required-feedback textarea{min-height:82px;margin-top:14px;border-color:var(--brand-border);background:#fff}
 .survey .required-feedback.is-current{background:linear-gradient(135deg,var(--brand-soft),#fff 72%);box-shadow:0 0 0 3px var(--brand-soft),0 10px 22px color-mix(in srgb,var(--brand-primary) 10%,transparent)}
 @media(max-width:760px){.survey .required-feedback{margin-left:20px;margin-right:20px;padding:17px 14px}.survey .required-feedback h3{font-size:17px}}
+
+/* Shared typography and ordinary page flow for the survey. */
+body,button,input,select,textarea,.chips,.score-cards,.welcome,.step-nav,.review-dock{font-family:var(--font-be-vietnam-pro),sans-serif}
+button,input,select,textarea{font:inherit}
+.survey .banners{position:static;overflow:visible}
+.survey .review-dock{position:static;top:auto}
+@media(max-width:760px){.survey .step-actions{position:static;bottom:auto}}
+
+/* Keep feedback choices compact, clear, and limited to two selections. */
+.survey .chips.compact button:disabled{cursor:not-allowed;opacity:.48;transform:none}
+.survey .chips.compact button:disabled:hover{border-color:#d9e0e8;background:#fff}
+.survey .choice-limit{display:block;margin-top:9px;color:var(--muted);font-size:12px;font-weight:650}
+.survey .feedback-note{margin-top:24px;padding:18px;border:1px solid var(--brand-border);border-radius:16px;background:linear-gradient(135deg,var(--brand-soft),#fff 72%)}
+.survey .feedback-note textarea{min-height:78px;margin-top:14px;border-color:var(--brand-border);background:#fff}
+.survey .feedback-note.is-current{box-shadow:0 0 0 3px var(--brand-soft)}
+@media(max-width:760px){.survey .feedback-note{margin-left:20px;margin-right:20px;padding:16px}.survey .feedback-note h3{font-size:17px}}
