@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronLeft, ChevronRight, Eye, Heart, MessageCircle, MessageSquarePlus, MessageSquareText, Pencil, Send, Star, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Eye, Heart, MessageCircle, MessageSquareText, Pencil, Send, Star, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type Company = 'Nguyên Kim' | 'Chính Nhân' | 'Kết Nối Thông Minh';
@@ -87,16 +87,14 @@ function Multi({ items, value, onChange, exclusive }: { items: string[]; value: 
   )}</div>;
 }
 
-function ReviewDock({ group, groupIndex, totalGroups, answer, currentQuestion, extraVisible, onSelect }: { group: Group; groupIndex: number; totalGroups: number; answer: Answer; currentQuestion: number; extraVisible: boolean; onSelect: (question: number) => void }) {
+function ReviewDock({ group, groupIndex, totalGroups, answer, currentQuestion, onSelect }: { group: Group; groupIndex: number; totalGroups: number; answer: Answer; currentQuestion: number; onSelect: (question: number) => void }) {
   return <aside className="review-dock" aria-label="Tiến độ câu hỏi">
     <div className="review-meta"><span>NHÓM {groupIndex + 1} / {totalGroups}</span><strong>{group.name}</strong></div>
     <div className="review-track" role="list">{reviewSteps.map((step, index) => {
       const complete = questionComplete(answer, index);
-      const optional = index > 2;
-      const available = index === currentQuestion || complete;
-      const disabled = (!available || (optional && !extraVisible));
+      const optional = index === 3 || index === 4;
       const Icon = complete ? Check : step.icon;
-      return <button type="button" role="listitem" key={step.label} className={(index === currentQuestion ? 'active ' : '') + (complete ? 'complete ' : '') + (optional ? 'optional' : '')} disabled={disabled} aria-current={index === currentQuestion ? 'step' : undefined} aria-label={'Câu ' + (index + 1) + ' - ' + step.title} onClick={() => onSelect(index)}><i><Icon size={15} /></i><span>{step.label}</span></button>;
+      return <button type="button" role="listitem" key={step.label} className={(index === currentQuestion ? 'active ' : '') + (complete ? 'complete ' : '') + (optional ? 'optional' : '')} aria-current={index === currentQuestion ? 'step' : undefined} aria-label={'Câu ' + (index + 1) + ' - ' + step.title} onClick={() => onSelect(index)}><i><Icon size={15} /></i><span>{step.label}</span></button>;
     })}</div>
     <div className="question-count">Câu {currentQuestion + 1} / 6<br /><strong>{reviewSteps[currentQuestion].title}</strong></div>
   </aside>;
@@ -111,7 +109,6 @@ export default function Home() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
-  const [extraOpen, setExtraOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
@@ -140,7 +137,7 @@ export default function Home() {
   }));
   const complete = (name: string) => {
     const current = answer(name);
-    return Boolean(current.firstImpression && current.messageClarity && current.score);
+    return Boolean(current.firstImpression && current.messageClarity && current.score && current.note.trim());
   };
   const rated = useMemo(() => groups.filter(group => complete(group.name)).length, [groups, draft.answers, draft.company]);
 
@@ -174,14 +171,14 @@ export default function Home() {
     }, { rootMargin: '-28% 0px -52% 0px', threshold: [0.2, 0.5, 0.8] });
     questions.forEach(question => observer.observe(question));
     return () => observer.disconnect();
-  }, [draft.company, currentStep, extraOpen, groups.length]);
+  }, [draft.company, currentStep, groups.length]);
 
   const validateGroup = (group: Group) => {
     const current = answer(group.name);
-    const missing = !current.firstImpression ? 'first-' + group.name : !current.messageClarity ? 'clarity-' + group.name : !current.score ? 'score-' + group.name : '';
+    const missing = !current.firstImpression ? 'first-' + group.name : !current.messageClarity ? 'clarity-' + group.name : !current.score ? 'score-' + group.name : !current.note.trim() ? 'note-' + group.name : '';
     if (!missing) return true;
     setErrors(items => [...items.filter(item => !item.endsWith(group.name)), missing]);
-    setMessage('Vui lòng hoàn tất 3 câu chính.');
+    setMessage(missing.startsWith('note-') ? 'Vui lòng cho biết 1 điều bạn muốn sửa.' : 'Vui lòng hoàn tất các câu bắt buộc.');
     document.getElementById(missing)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return false;
   };
@@ -194,6 +191,7 @@ export default function Home() {
       if (!current.firstImpression) next.push('first-' + group.name);
       else if (!current.messageClarity) next.push('clarity-' + group.name);
       else if (!current.score) next.push('score-' + group.name);
+      else if (!current.note.trim()) next.push('note-' + group.name);
     });
     setErrors(next);
     if (next.length) {
@@ -254,19 +252,16 @@ export default function Home() {
           {currentStep < groups.length ? (() => {
             const group = groups[currentStep];
             const current = answer(group.name);
-            const hasExtra = current.good.length > 0 || current.improve.length > 0 || Boolean(current.other || current.note);
-            const expanded = extraOpen[group.name] ?? (hasExtra || currentQuestion > 2);
             return <section className={'card category step-card ' + (errors.some(error => error.endsWith(group.name)) ? 'error' : '')}>
               <div className="category-head"><div><p>NHÓM BANNER {String(currentStep + 1).padStart(2, '0')} / {String(groups.length).padStart(2, '0')}</p><h2>{group.name}</h2><span>2 banner · 1 đánh giá chung</span></div><small>{complete(group.name) ? <><Check size={14} /> Đã đánh giá</> : 'Chưa đánh giá'}</small></div>
               <div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={asset(image)} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="eager" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div>
-              <ReviewDock group={group} groupIndex={currentStep} totalGroups={groups.length} answer={current} currentQuestion={currentQuestion} extraVisible={expanded} onSelect={question => { if (question > 2 && !expanded) { setExtraOpen(items => ({ ...items, [group.name]: true })); window.setTimeout(() => moveToQuestion(question), 0); } else moveToQuestion(question); }} />
+              <ReviewDock group={group} groupIndex={currentStep} totalGroups={groups.length} answer={current} currentQuestion={currentQuestion} onSelect={moveToQuestion} />
               <div id="question-0" data-question="0" className={'question question-focus ' + (currentQuestion === 0 ? 'is-current' : '')}><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
               <div id="question-1" data-question="1" className={'question question-focus ' + (currentQuestion === 1 ? 'is-current' : '')}><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
               <div id="question-2" data-question="2" className={'question question-focus ' + (currentQuestion === 2 ? 'is-current' : '')}><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>
-              <div className="extra-feedback"><button type="button" className="extra-toggle" aria-expanded={expanded} onClick={() => { const next = !expanded; setExtraOpen(items => ({ ...items, [group.name]: next })); if (next) window.setTimeout(() => moveToQuestion(3), 0); else if (currentQuestion > 2) moveToQuestion(2); }}><MessageSquarePlus size={17} />{expanded ? 'Thu gọn góp ý thêm' : 'Góp ý thêm'}<span>{expanded ? '−' : '+'}</span></button></div>
-              {expanded && <div className="extra-content"><div id="question-3" data-question="3" className={'question question-focus ' + (currentQuestion === 3 ? 'is-current' : '')}><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
+              <div className="extra-content"><div id="question-3" data-question="3" className={'question question-focus ' + (currentQuestion === 3 ? 'is-current' : '')}><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
                 <div id="question-4" data-question="4" className={'question question-focus ' + (currentQuestion === 4 ? 'is-current' : '')}><h3><i>05</i>Bạn muốn banner được chỉnh gì nhất?</h3><p>Chọn tối đa 2.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Bạn muốn chỉnh gì khác?<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Mô tả ngắn ý bạn" /></label>}</div>
-                <div id="question-5" data-question="5" className={'question question-focus ' + (currentQuestion === 5 ? 'is-current' : '')}><h3><i>06</i>Nếu chỉ được sửa 1 điều,{" "}bạn muốn sửa gì?</h3><textarea rows={2} value={current.note} onChange={event => patch(group.name, { note: event.target.value })} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..." /></div></div>}
+                <div id={'note-' + group.name} data-question="5" className={'question question-focus required-feedback ' + (currentQuestion === 5 ? 'is-current' : '')}><p className="required-label">GÓP Ý BẮT BUỘC</p><h3><i>06</i>Nếu chỉ được sửa 1 điều,{" "}bạn muốn sửa gì? <b>*</b></h3><p>Hãy ghi một thay đổi quan trọng nhất để Marketing ưu tiên cải thiện.</p><textarea rows={3} required value={current.note} onChange={event => { patch(group.name, { note: event.target.value }); setErrors(items => items.filter(item => item !== 'note-' + group.name)); }} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..." />{errors.includes('note-' + group.name) && <em className="invalid">Vui lòng nhập một góp ý.</em>}</div></div>
               <div className="step-actions"><button type="button" className="previous" onClick={() => moveToStep(currentStep - 1)} disabled={currentStep === 0}><ChevronLeft size={17} /> Trước</button><button type="button" className="next" onClick={() => validateGroup(group) && moveToStep(currentStep + 1)}>{currentStep === groups.length - 1 ? 'Hoàn tất đánh giá' : 'Nhóm tiếp theo'} <ChevronRight size={17} /></button></div>
             </section>;
           })() : <section className="card final step-card"><div className="head"><div><p>HOÀN TẤT KHẢO SÁT</p><h2>Góp ý chung</h2><span>Thêm vài ý ngắn để Marketing cải thiện banner tốt hơn.</span></div></div>
