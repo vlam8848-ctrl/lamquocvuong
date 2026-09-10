@@ -1,11 +1,11 @@
 'use client';
 
-import { Check, Send, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Send, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type Company = 'Nguyên Kim' | 'Chính Nhân' | 'Kết Nối Thông Minh';
 type Answer = { score?: number; firstImpression?: string; messageClarity?: string; good: string[]; improve: string[]; other: string; note: string };
-type Draft = { name: string; department: string; company: Company | ''; answers: Record<string, Answer>; firstWebsiteNeed?: string; textAmount?: string; clickIntent?: string; global: string };
+type Draft = { name: string; department: string; company: Company | ''; answers: Record<string, Answer>; firstWebsiteNeed?: string; textAmount?: string; clickIntent?: string; global: string; currentStep?: number };
 type Group = { name: string; images: [string, string] };
 
 const departments = ['Marketing', 'Kinh doanh', 'PM Online', 'Mua hàng', 'Kỹ thuật', 'HCNS'];
@@ -86,6 +86,7 @@ export default function Home() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [extraOpen, setExtraOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
@@ -110,6 +111,7 @@ export default function Home() {
   }, [draft.company, photo]);
 
   const groups = draft.company ? data[draft.company] : [];
+  const currentStep = Math.min(Math.max(draft.currentStep || 0, 0), groups.length);
   const answer = (name: string) => draft.answers[itemKey(draft.company, name)] || blank();
   const patch = (name: string, change: Partial<Answer>) => setDraft(current => ({
     ...current,
@@ -120,6 +122,22 @@ export default function Home() {
     return Boolean(current.firstImpression && current.messageClarity && current.score);
   };
   const rated = useMemo(() => groups.filter(group => complete(group.name)).length, [groups, draft.answers, draft.company]);
+
+  const moveToStep = (step: number) => {
+    const safeStep = Math.min(Math.max(step, 0), groups.length);
+    setDraft(current => ({ ...current, currentStep: safeStep }));
+    window.setTimeout(() => document.getElementById('survey-step')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  };
+
+  const validateGroup = (group: Group) => {
+    const current = answer(group.name);
+    const missing = !current.firstImpression ? 'first-' + group.name : !current.messageClarity ? 'clarity-' + group.name : !current.score ? 'score-' + group.name : '';
+    if (!missing) return true;
+    setErrors(items => [...items.filter(item => !item.endsWith(group.name)), missing]);
+    setMessage('Vui lòng hoàn tất 3 câu chính.');
+    document.getElementById(missing)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  };
 
   const validate = () => {
     const next: string[] = [];
@@ -132,6 +150,8 @@ export default function Home() {
     });
     setErrors(next);
     if (next.length) {
+      const groupIndex = groups.findIndex(group => next.some(error => error.endsWith(group.name)));
+      if (groupIndex >= 0) setDraft(current => ({ ...current, currentStep: groupIndex }));
       document.getElementById(next[0])?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setMessage(!draft.department.trim() ? 'Vui lòng nhập phòng ban.' : 'Vui lòng chọn một đáp án ở mục được đánh dấu.');
       return false;
@@ -182,27 +202,34 @@ export default function Home() {
         <div className="profile-summary"><span>{draft.name || 'Chưa nhập tên'}</span><span>{draft.department || 'Chưa chọn phòng ban'}</span><span>{draft.company || 'Chưa chọn công ty'}</span></div>
       </section>
       {draft.company ? <>
-        <nav className="nav">{groups.map(group => <button type="button" key={group.name} className={complete(group.name) ? 'complete' : ''} onClick={() => document.getElementById('group-' + group.name)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{complete(group.name) ? <Check size={14} /> : <i>•</i>}{group.name}</button>)}</nav>
-        <div className="stack">{groups.map((group, index) => {
-          const current = answer(group.name);
-          return <section id={'group-' + group.name} className={'card category ' + (errors.some(error => error.endsWith(group.name)) ? 'error' : '')} key={group.name}>
-            <div className="category-head"><div><p>NHÓM BANNER {String(index + 1).padStart(2, '0')}</p><h2>{group.name}</h2><span>2 banner · 1 đánh giá chung</span></div><small>{complete(group.name) ? <><Check size={14} /> Đã đánh giá</> : 'Chưa đánh giá'}</small></div>
-            <div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={image} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="lazy" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div>
-            <div id={'first-' + group.name} className="question"><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
-            <div id={'clarity-' + group.name} className="question"><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
-            <div id={'score-' + group.name} className="question"><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>
-            <div className="question"><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
-            <div className="question"><h3><i>05</i>Bạn muốn banner được chỉnh gì nhất?</h3><p>Chọn tối đa 2.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Bạn muốn chỉnh gì khác?<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Mô tả ngắn ý bạn" /></label>}</div>
-            <div className="question"><h3><i>06</i>Nếu chỉ được sửa 1 điều,{" "}bạn muốn sửa gì?</h3><textarea rows={2} value={current.note} onChange={event => patch(group.name, { note: event.target.value })} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..." /></div>
-          </section>;
-        })}</div>
-        <section className="card final"><div className="head"><div><p>GÓP Ý CHUNG</p><h2>Góp ý chung</h2></div></div>
-          <div className="question"><h3>Khi xem banner trên website, bạn thường muốn thấy điều gì đầu tiên?</h3><Radios items={websiteFirst} value={draft.firstWebsiteNeed} label="Điều muốn thấy" onChange={firstWebsiteNeed => setDraft(current => ({ ...current, firstWebsiteNeed }))} /></div>
-          <div className="question"><h3>Bạn thấy lượng chữ trên banner hiện nay thế nào?</h3><Radios items={textAmounts} value={draft.textAmount} label="Lượng chữ" onChange={textAmount => setDraft(current => ({ ...current, textAmount }))} /></div>
-          <div className="question"><h3>Banner hiện tại có khiến bạn muốn bấm vào xem sản phẩm không?</h3><Radios items={clickIntents} value={draft.clickIntent} label="Ý định click" onChange={clickIntent => setDraft(current => ({ ...current, clickIntent }))} /></div>
-          <div className="question"><h3>Bạn muốn banner website trong thời gian tới thay đổi điều gì nhất?</h3><textarea rows={3} value={draft.global} onChange={event => setDraft(current => ({ ...current, global: event.target.value }))} placeholder="Chia sẻ điều bạn muốn Marketing cải thiện..." /></div>
-          <button type="button" className="submit" onClick={submit} disabled={sending}>{sending ? 'ĐANG GỬI ĐÁNH GIÁ...' : <><Send size={17} /> GỬI ĐÁNH GIÁ</>}</button><p className="thanks">Cảm ơn bạn đã dành thời gian góp ý để Marketing hoàn thiện banner website.</p>
-        </section>
+        <nav className="step-nav" aria-label="Điều hướng nhóm banner">{groups.map((group, index) => { const available = index <= currentStep || complete(group.name); return <button type="button" key={group.name} className={(index === currentStep ? 'active ' : '') + (complete(group.name) ? 'complete' : '')} aria-current={index === currentStep ? 'step' : undefined} onClick={() => available && moveToStep(index)} disabled={!available}>{complete(group.name) ? <Check size={14} /> : String(index + 1).padStart(2, '0')}<span>{group.name}</span></button>; })}</nav>
+        <div id="survey-step" className="stepper">
+          {currentStep < groups.length ? (() => {
+            const group = groups[currentStep];
+            const current = answer(group.name);
+            const hasExtra = current.good.length > 0 || current.improve.length > 0 || Boolean(current.other || current.note);
+            const expanded = extraOpen[group.name] ?? hasExtra;
+            return <section className={'card category step-card ' + (errors.some(error => error.endsWith(group.name)) ? 'error' : '')}>
+              <div className="category-head"><div><p>NHÓM BANNER {String(currentStep + 1).padStart(2, '0')} / {String(groups.length).padStart(2, '0')}</p><h2>{group.name}</h2><span>2 banner · 1 đánh giá chung</span></div><small>{complete(group.name) ? <><Check size={14} /> Đã đánh giá</> : 'Chưa đánh giá'}</small></div>
+              <div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={image} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="lazy" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div>
+              <div id={'first-' + group.name} className={'question ' + (!current.firstImpression ? '' : 'answered')}><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
+              <div id={'clarity-' + group.name} className={'question ' + (current.firstImpression && !current.messageClarity ? 'guided' : '')}><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
+              <div id={'score-' + group.name} className={'question ' + (current.messageClarity && !current.score ? 'guided' : '')}><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>
+              <div className="extra-feedback"><button type="button" className="extra-toggle" aria-expanded={expanded} onClick={() => setExtraOpen(items => ({ ...items, [group.name]: !expanded }))}><MessageSquarePlus size={17} />{expanded ? 'Thu gọn góp ý thêm' : 'Góp ý thêm'}<span>{expanded ? '−' : '+'}</span></button>{expanded && <div className="extra-content">
+                <div className="question"><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
+                <div className="question"><h3><i>05</i>Bạn muốn banner được chỉnh gì nhất?</h3><p>Chọn tối đa 2.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Bạn muốn chỉnh gì khác?<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Mô tả ngắn ý bạn" /></label>}</div>
+                <div className="question"><h3><i>06</i>Nếu chỉ được sửa 1 điều,{" "}bạn muốn sửa gì?</h3><textarea rows={2} value={current.note} onChange={event => patch(group.name, { note: event.target.value })} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..." /></div>
+              </div>}</div>
+              <div className="step-actions"><button type="button" className="previous" onClick={() => moveToStep(currentStep - 1)} disabled={currentStep === 0}><ChevronLeft size={17} /> Trước</button><button type="button" className="next" onClick={() => validateGroup(group) && moveToStep(currentStep + 1)}>{currentStep === groups.length - 1 ? 'Hoàn tất đánh giá' : 'Tiếp theo'} <ChevronRight size={17} /></button></div>
+            </section>;
+          })() : <section className="card final step-card"><div className="head"><div><p>HOÀN TẤT KHẢO SÁT</p><h2>Góp ý chung</h2><span>Thêm vài ý ngắn để Marketing cải thiện banner tốt hơn.</span></div></div>
+            <div className="question"><h3>Khi xem banner trên website, bạn thường muốn thấy điều gì đầu tiên?</h3><Radios items={websiteFirst} value={draft.firstWebsiteNeed} label="Điều muốn thấy" onChange={firstWebsiteNeed => setDraft(current => ({ ...current, firstWebsiteNeed }))} /></div>
+            <div className="question"><h3>Bạn thấy lượng chữ trên banner hiện nay thế nào?</h3><Radios items={textAmounts} value={draft.textAmount} label="Lượng chữ" onChange={textAmount => setDraft(current => ({ ...current, textAmount }))} /></div>
+            <div className="question"><h3>Banner hiện tại có khiến bạn muốn bấm vào xem sản phẩm không?</h3><Radios items={clickIntents} value={draft.clickIntent} label="Ý định click" onChange={clickIntent => setDraft(current => ({ ...current, clickIntent }))} /></div>
+            <div className="question"><h3>Bạn muốn banner website trong thời gian tới thay đổi điều gì nhất?</h3><textarea rows={2} value={draft.global} onChange={event => setDraft(current => ({ ...current, global: event.target.value }))} placeholder="Chia sẻ điều bạn muốn Marketing cải thiện..." /></div>
+            <div className="step-actions"><button type="button" className="previous" onClick={() => moveToStep(groups.length - 1)}><ChevronLeft size={17} /> Quay lại</button><button type="button" className="submit next" onClick={submit} disabled={sending}>{sending ? 'ĐANG GỬI...' : <><Send size={17} /> GỬI KHẢO SÁT</>}</button></div><p className="thanks">Cảm ơn bạn đã dành thời gian góp ý để Marketing hoàn thiện banner website.</p>
+          </section>}
+        </div>
       </> : <section className="card empty"><h2>Chọn công ty để bắt đầu</h2><p>Website chỉ hiển thị banner thuộc công ty bạn chọn.</p></section>}
     </div>
     {welcome && <div className="welcome" role="dialog" aria-modal="true" aria-label="Bắt đầu khảo sát"><section>
@@ -211,7 +238,7 @@ export default function Home() {
       <label>Phòng ban <b>*</b><input list="department-options" value={draft.department} onChange={event => setDraft(current => ({ ...current, department: event.target.value }))} placeholder="Nhập hoặc chọn phòng ban" /><datalist id="department-options">{departments.map(department => <option value={department} key={department} />)}</datalist></label>
       <div className="welcome-company"><label>Công ty <b>*</b></label><div className="companies">{([
         ['Nguyên Kim', 'Vi Tính Nguyên Kim'], ['Chính Nhân', 'Công Nghệ Chính Nhân'], ['Kết Nối Thông Minh', 'SMC'],
-      ] as [Company, string][]).map(([company, subtitle]) => <button type="button" key={company} className={draft.company === company ? 'on' : ''} onClick={() => setDraft(current => ({ ...current, company }))}><strong>{company}</strong><small>{subtitle}</small></button>)}</div></div>
+      ] as [Company, string][]).map(([company, subtitle]) => <button type="button" key={company} className={draft.company === company ? 'on' : ''} onClick={() => setDraft(current => ({ ...current, company, currentStep: 0 }))}><strong>{company}</strong><small>{subtitle}</small></button>)}</div></div>
       <button className="start" type="button" onClick={() => draft.name.trim() && draft.department.trim() && draft.company ? setWelcome(false) : setMessage(!draft.department.trim() ? 'Vui lòng nhập phòng ban.' : 'Vui lòng nhập tên và chọn công ty.')}>BẮT ĐẦU KHẢO SÁT</button>
     </section></div>}
     {message && <button className="toast" onClick={() => setMessage('')}>{message}<X size={16} /></button>}
