@@ -285,7 +285,7 @@ export default function Home() {
       <label>Phòng ban <b>*</b><input list="department-options" value={draft.department} onChange={event => setDraft(current => ({ ...current, department: event.target.value }))} placeholder="Nhập hoặc chọn phòng ban" /><datalist id="department-options">{departments.map(department => <option value={department} key={department} />)}</datalist></label>
       <div className="welcome-company"><label>Công ty <b>*</b></label><div className="companies">{([
         ['Nguyên Kim', 'Vi Tính Nguyên Kim'], ['Chính Nhân', 'Công Nghệ Chính Nhân'], ['Kết Nối Thông Minh', 'SMC'],
-      ] as [Company, string][]).map(([company, subtitle]) => <button type="button" key={company} className={draft.company === company ? 'on' : ''} onClick={() => setDraft(current => ({ ...current, company, currentStep: 0, currentQuestion: 0 }))}><strong>{company}</strong><small>{subtitle}</small></button>)}</div></div>
+      ] as [Company, string][]).map(([company, subtitle]) => <button type="button" key={company} className={'company-card ' + (draft.company === company ? 'on ' : '') + (company === 'Kết Nối Thông Minh' ? 'company-card-long' : '')} onClick={() => setDraft(current => ({ ...current, company, currentStep: 0, currentQuestion: 0 }))}><strong>{company}</strong><small>{subtitle}</small></button>)}</div></div>
       <button className="start" type="button" onClick={() => draft.name.trim() && draft.department.trim() && draft.company ? setWelcome(false) : setMessage(!draft.department.trim() ? 'Vui lòng nhập phòng ban.' : 'Vui lòng nhập tên và chọn công ty.')}>BẮT ĐẦU KHẢO SÁT</button>
     </section></div>}
     {message && <button className="toast" onClick={() => setMessage('')}>{message}<X size={16} /></button>}
