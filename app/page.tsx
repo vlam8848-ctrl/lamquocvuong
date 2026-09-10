@@ -1,11 +1,11 @@
 'use client';
 
-import { Check, ChevronLeft, ChevronRight, MessageSquarePlus, Send, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Eye, Heart, MessageCircle, MessageSquarePlus, MessageSquareText, Pencil, Send, Star, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type Company = 'Nguyên Kim' | 'Chính Nhân' | 'Kết Nối Thông Minh';
 type Answer = { score?: number; firstImpression?: string; messageClarity?: string; good: string[]; improve: string[]; other: string; note: string };
-type Draft = { name: string; department: string; company: Company | ''; answers: Record<string, Answer>; firstWebsiteNeed?: string; textAmount?: string; clickIntent?: string; global: string; currentStep?: number };
+type Draft = { name: string; department: string; company: Company | ''; answers: Record<string, Answer>; firstWebsiteNeed?: string; textAmount?: string; clickIntent?: string; global: string; currentStep?: number; currentQuestion?: number };
 type Group = { name: string; images: [string, string] };
 
 const departments = ['Marketing', 'Kinh doanh', 'PM Online', 'Mua hàng', 'Kỹ thuật', 'HCNS'];
@@ -23,6 +23,14 @@ const scoreLevels = [
 const websiteFirst = ['Sản phẩm', 'Giá', 'Khuyến mãi', 'Điểm nổi bật của sản phẩm', 'Thương hiệu', 'Nút xem thêm / mua hàng'];
 const textAmounts = ['Quá nhiều', 'Hơi nhiều', 'Vừa đủ', 'Có thể thêm thông tin'];
 const clickIntents = ['Rất muốn', 'Có thể', 'Không chắc', 'Không muốn'];
+const reviewSteps = [
+  { label: '3 giây', title: 'Trong 3 giây đầu', icon: Eye },
+  { label: 'Hiểu', title: 'Mức độ hiểu', icon: MessageCircle },
+  { label: 'Điểm', title: 'Đánh giá tổng thể', icon: Star },
+  { label: 'Thích', title: 'Điểm thích', icon: Heart },
+  { label: 'Chỉnh', title: 'Điểm cần chỉnh', icon: Pencil },
+  { label: 'Góp ý', title: 'Góp ý cụ thể', icon: MessageSquareText },
+] as const;
 
 const data: Record<Company, Group[]> = {
   'Nguyên Kim': [
@@ -56,6 +64,7 @@ const initial: Draft = { name: '', department: '', company: '', answers: {}, glo
 const itemKey = (company: string, name: string) => company + ' • ' + name;
 const getCompanyTheme = (company: Draft['company']) => company === 'Nguyên Kim' ? 'nk' : company === 'Chính Nhân' ? 'cn' : company === 'Kết Nối Thông Minh' ? 'smc' : '';
 const asset = (path: string) => import.meta.env.BASE_URL + path.replace(/^\//, '');
+const questionComplete = (answer: Answer, question: number) => [Boolean(answer.firstImpression), Boolean(answer.messageClarity), Boolean(answer.score), answer.good.length > 0, answer.improve.length > 0 || Boolean(answer.other), Boolean(answer.note)][question];
 
 function Radios({ items, value, onChange, label }: { items: string[]; value?: string; onChange: (value: string) => void; label: string }) {
   return <div className="radio-cards" role="radiogroup" aria-label={label}>{items.map(item =>
@@ -76,6 +85,21 @@ function Multi({ items, value, onChange, exclusive }: { items: string[]; value: 
       {value.includes(item) && <Check size={14} />} {item}
     </button>
   )}</div>;
+}
+
+function ReviewDock({ group, groupIndex, totalGroups, answer, currentQuestion, extraVisible, onSelect }: { group: Group; groupIndex: number; totalGroups: number; answer: Answer; currentQuestion: number; extraVisible: boolean; onSelect: (question: number) => void }) {
+  return <aside className="review-dock" aria-label="Tiến độ câu hỏi">
+    <div className="review-meta"><span>NHÓM {groupIndex + 1} / {totalGroups}</span><strong>{group.name}</strong></div>
+    <div className="review-track" role="list">{reviewSteps.map((step, index) => {
+      const complete = questionComplete(answer, index);
+      const optional = index > 2;
+      const available = index === currentQuestion || complete;
+      const disabled = (!available || (optional && !extraVisible));
+      const Icon = complete ? Check : step.icon;
+      return <button type="button" role="listitem" key={step.label} className={(index === currentQuestion ? 'active ' : '') + (complete ? 'complete ' : '') + (optional ? 'optional' : '')} disabled={disabled} aria-current={index === currentQuestion ? 'step' : undefined} aria-label={'Câu ' + (index + 1) + ' - ' + step.title} onClick={() => onSelect(index)}><i><Icon size={15} /></i><span>{step.label}</span></button>;
+    })}</div>
+    <div className="question-count">Câu {currentQuestion + 1} / 6<br /><strong>{reviewSteps[currentQuestion].title}</strong></div>
+  </aside>;
 }
 
 export default function Home() {
@@ -108,6 +132,7 @@ export default function Home() {
   }, []);
   const groups = draft.company ? data[draft.company] : [];
   const currentStep = Math.min(Math.max(draft.currentStep || 0, 0), groups.length);
+  const currentQuestion = Math.min(Math.max(draft.currentQuestion || 0, 0), 5);
   const answer = (name: string) => draft.answers[itemKey(draft.company, name)] || blank();
   const patch = (name: string, change: Partial<Answer>) => setDraft(current => ({
     ...current,
@@ -121,8 +146,22 @@ export default function Home() {
 
   const moveToStep = (step: number) => {
     const safeStep = Math.min(Math.max(step, 0), groups.length);
-    setDraft(current => ({ ...current, currentStep: safeStep }));
+    setDraft(current => ({ ...current, currentStep: safeStep, currentQuestion: safeStep === currentStep ? current.currentQuestion : 0 }));
     window.setTimeout(() => document.getElementById('survey-step')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  };
+
+  const moveToQuestion = (question: number) => {
+    setDraft(current => ({ ...current, currentQuestion: Math.min(Math.max(question, 0), 5) }));
+    window.setTimeout(() => document.getElementById('active-question')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
+  };
+
+  const validateQuestion = (group: Group, question: number) => {
+    const current = answer(group.name);
+    const error = question === 0 && !current.firstImpression ? 'first-' + group.name : question === 1 && !current.messageClarity ? 'clarity-' + group.name : question === 2 && !current.score ? 'score-' + group.name : '';
+    if (!error) return true;
+    setErrors(items => [...items.filter(item => !item.endsWith(group.name)), error]);
+    setMessage('Vui lòng chọn một đáp án.');
+    return false;
   };
 
   const validateGroup = (group: Group) => {
@@ -208,15 +247,15 @@ export default function Home() {
             return <section className={'card category step-card ' + (errors.some(error => error.endsWith(group.name)) ? 'error' : '')}>
               <div className="category-head"><div><p>NHÓM BANNER {String(currentStep + 1).padStart(2, '0')} / {String(groups.length).padStart(2, '0')}</p><h2>{group.name}</h2><span>2 banner · 1 đánh giá chung</span></div><small>{complete(group.name) ? <><Check size={14} /> Đã đánh giá</> : 'Chưa đánh giá'}</small></div>
               <div className="banners">{group.images.map((image, imageIndex) => <button type="button" className="banner" key={image} onClick={() => setPhoto(image)}><b>OPTION 0{imageIndex + 1}</b><div><img src={asset(image)} alt={'Banner ' + (imageIndex + 1) + ' ' + group.name} loading="eager" /></div><small>Nhấn để xem ảnh lớn</small></button>)}</div>
-              <div id={'first-' + group.name} className={'question ' + (!current.firstImpression ? '' : 'answered')}><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
-              <div id={'clarity-' + group.name} className={'question ' + (current.firstImpression && !current.messageClarity ? 'guided' : '')}><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>
-              <div id={'score-' + group.name} className={'question ' + (current.messageClarity && !current.score ? 'guided' : '')}><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>
-              <div className="extra-feedback"><button type="button" className="extra-toggle" aria-expanded={expanded} onClick={() => setExtraOpen(items => ({ ...items, [group.name]: !expanded }))}><MessageSquarePlus size={17} />{expanded ? 'Thu gọn góp ý thêm' : 'Góp ý thêm'}<span>{expanded ? '−' : '+'}</span></button>{expanded && <div className="extra-content">
-                <div className="question"><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>
-                <div className="question"><h3><i>05</i>Bạn muốn banner được chỉnh gì nhất?</h3><p>Chọn tối đa 2.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Bạn muốn chỉnh gì khác?<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Mô tả ngắn ý bạn" /></label>}</div>
-                <div className="question"><h3><i>06</i>Nếu chỉ được sửa 1 điều,{" "}bạn muốn sửa gì?</h3><textarea rows={2} value={current.note} onChange={event => patch(group.name, { note: event.target.value })} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..." /></div>
-              </div>}</div>
-              <div className="step-actions"><button type="button" className="previous" onClick={() => moveToStep(currentStep - 1)} disabled={currentStep === 0}><ChevronLeft size={17} /> Trước</button><button type="button" className="next" onClick={() => validateGroup(group) && moveToStep(currentStep + 1)}>{currentStep === groups.length - 1 ? 'Hoàn tất đánh giá' : 'Tiếp theo'} <ChevronRight size={17} /></button></div>
+              {currentQuestion === 0 && <div id="active-question" className="question question-focus"><h3><i>01</i>Trong 3 giây đầu, bạn chú ý điều gì nhất? <b>*</b></h3><p>Chọn điều bạn nhìn thấy hoặc nhớ đến đầu tiên.</p><Radios items={firstImpressions} value={current.firstImpression} label="3 giây đầu" onChange={value => { patch(group.name, { firstImpression: value }); setErrors(items => items.filter(item => item !== 'first-' + group.name)); }} />{errors.includes('first-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>}
+              {currentQuestion === 1 && <div id="active-question" className="question question-focus"><h3><i>02</i>Bạn có hiểu banner đang muốn nói gì không? <b>*</b></h3><Radios items={clarityOptions} value={current.messageClarity} label="Mức độ hiểu" onChange={value => { patch(group.name, { messageClarity: value }); setErrors(items => items.filter(item => item !== 'clarity-' + group.name)); }} />{errors.includes('clarity-' + group.name) && <em className="invalid">Vui lòng chọn một đáp án.</em>}</div>}
+              {currentQuestion === 2 && <div id="active-question" className="question question-focus"><h3><i>03</i>Nhìn chung, bạn thấy nhóm banner này thế nào? <b>*</b></h3><div className="score-cards">{scoreLevels.map(([label, description], score) => <button type="button" className={current.score === score + 1 ? 'on' : ''} aria-pressed={current.score === score + 1} key={label} onClick={() => { patch(group.name, { score: score + 1 }); setErrors(items => items.filter(item => item !== 'score-' + group.name)); }}><strong>{score + 1}</strong><span>{label}</span><small>{description}</small></button>)}</div>{errors.includes('score-' + group.name) && <em className="invalid">Vui lòng chọn điểm đánh giá.</em>}</div>}
+              {currentQuestion === 3 && <div id="active-question" className="question question-focus"><h3><i>04</i>Điều bạn thích nhất ở nhóm banner này là gì?</h3><p>Chọn tối đa 2.</p><Multi items={goodOptions} value={current.good} onChange={good => patch(group.name, { good })} exclusive="Không có điểm nào đặc biệt" /></div>}
+              {currentQuestion === 4 && <div id="active-question" className="question question-focus"><h3><i>05</i>Bạn muốn banner được chỉnh gì nhất?</h3><p>Chọn tối đa 2.</p><Multi items={improveOptions} value={current.improve} onChange={improve => patch(group.name, { improve })} exclusive="Không cần chỉnh" />{current.improve.includes('Khác') && <label className="other">Bạn muốn chỉnh gì khác?<input value={current.other} onChange={event => patch(group.name, { other: event.target.value })} placeholder="Mô tả ngắn ý bạn" /></label>}</div>}
+              {currentQuestion === 5 && <div id="active-question" className="question question-focus"><h3><i>06</i>Nếu chỉ được sửa 1 điều,{" "}bạn muốn sửa gì?</h3><textarea rows={2} value={current.note} onChange={event => patch(group.name, { note: event.target.value })} placeholder="Ví dụ: Cho sản phẩm lớn hơn, giảm chữ, làm giá nổi bật hơn..." /></div>}
+              {(currentQuestion >= 2 || expanded) && <div className="extra-feedback"><button type="button" className="extra-toggle" aria-expanded={expanded} onClick={() => { const next = !expanded; setExtraOpen(items => ({ ...items, [group.name]: next })); if (next) moveToQuestion(3); else if (currentQuestion > 2) moveToQuestion(2); }}><MessageSquarePlus size={17} />{expanded ? 'Thu gọn góp ý thêm' : 'Góp ý thêm'}<span>{expanded ? '−' : '+'}</span></button></div>}
+              <ReviewDock group={group} groupIndex={currentStep} totalGroups={groups.length} answer={current} currentQuestion={currentQuestion} extraVisible={expanded} onSelect={moveToQuestion} />
+              <div className="step-actions"><button type="button" className="previous" onClick={() => currentQuestion > 0 ? moveToQuestion(currentQuestion - 1) : moveToStep(currentStep - 1)} disabled={currentQuestion === 0 && currentStep === 0}><ChevronLeft size={17} /> Trước</button><button type="button" className="next" onClick={() => { if (!validateQuestion(group, currentQuestion)) return; if (currentQuestion < 2) return moveToQuestion(currentQuestion + 1); if (currentQuestion === 2 && !expanded) return moveToStep(currentStep + 1); if (currentQuestion < 5) return moveToQuestion(currentQuestion + 1); moveToStep(currentStep + 1); }}>{currentQuestion === 2 && !expanded ? (currentStep === groups.length - 1 ? 'Hoàn tất đánh giá' : 'Nhóm tiếp theo') : currentQuestion === 5 ? (currentStep === groups.length - 1 ? 'Hoàn tất đánh giá' : 'Nhóm tiếp theo') : 'Tiếp theo'} <ChevronRight size={17} /></button></div>
             </section>;
           })() : <section className="card final step-card"><div className="head"><div><p>HOÀN TẤT KHẢO SÁT</p><h2>Góp ý chung</h2><span>Thêm vài ý ngắn để Marketing cải thiện banner tốt hơn.</span></div></div>
             <div className="question"><h3>Khi xem banner trên website, bạn thường muốn thấy điều gì đầu tiên?</h3><Radios items={websiteFirst} value={draft.firstWebsiteNeed} label="Điều muốn thấy" onChange={firstWebsiteNeed => setDraft(current => ({ ...current, firstWebsiteNeed }))} /></div>
@@ -234,7 +273,7 @@ export default function Home() {
       <label>Phòng ban <b>*</b><input list="department-options" value={draft.department} onChange={event => setDraft(current => ({ ...current, department: event.target.value }))} placeholder="Nhập hoặc chọn phòng ban" /><datalist id="department-options">{departments.map(department => <option value={department} key={department} />)}</datalist></label>
       <div className="welcome-company"><label>Công ty <b>*</b></label><div className="companies">{([
         ['Nguyên Kim', 'Vi Tính Nguyên Kim'], ['Chính Nhân', 'Công Nghệ Chính Nhân'], ['Kết Nối Thông Minh', 'SMC'],
-      ] as [Company, string][]).map(([company, subtitle]) => <button type="button" key={company} className={draft.company === company ? 'on' : ''} onClick={() => setDraft(current => ({ ...current, company, currentStep: 0 }))}><strong>{company}</strong><small>{subtitle}</small></button>)}</div></div>
+      ] as [Company, string][]).map(([company, subtitle]) => <button type="button" key={company} className={draft.company === company ? 'on' : ''} onClick={() => setDraft(current => ({ ...current, company, currentStep: 0, currentQuestion: 0 }))}><strong>{company}</strong><small>{subtitle}</small></button>)}</div></div>
       <button className="start" type="button" onClick={() => draft.name.trim() && draft.department.trim() && draft.company ? setWelcome(false) : setMessage(!draft.department.trim() ? 'Vui lòng nhập phòng ban.' : 'Vui lòng nhập tên và chọn công ty.')}>BẮT ĐẦU KHẢO SÁT</button>
     </section></div>}
     {message && <button className="toast" onClick={() => setMessage('')}>{message}<X size={16} /></button>}
