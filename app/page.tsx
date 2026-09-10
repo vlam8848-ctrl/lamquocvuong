@@ -287,7 +287,7 @@ export default function Home() {
       {draft.company && <div className="progress"><b>Đã đánh giá {rated}/{groups.length} nhóm</b><i><em style={{ width: (rated / groups.length * 100) + '%' }} /></i></div>}
     </div></header>
     <div className="wrap">
-      <section className="hero"><p>ĐÁNH GIÁ BANNER WEBSITE</p><h1>Xem nhanh, góp ý dễ.</h1><span>Mỗi nhóm có 2 banner. Bạn chỉ cần đánh giá chung một lần.</span></section>
+      <section className="hero"><p>ĐÁNH GIÁ BANNER WEBSITE</p><h1>KHẢO SÁT BANNER NKC 2026</h1><span>Ý kiến của anh / chị giúp Marketing điều chỉnh banner phù hợp, rõ ràng và dễ xem hơn.</span></section>
       <section id="profile" className={'card profile ' + (errors.includes('profile') ? 'error' : '')}>
         <div className="head"><div><p>THÔNG TIN</p><h2>Người đánh giá</h2></div><button className="edit-profile" type="button" onClick={() => setWelcome(true)}>Chỉnh sửa</button></div>
         <div className="profile-summary"><span>{draft.name || 'Chưa nhập tên'}</span><span>{draft.department || 'Chưa chọn phòng ban'}</span><span>{draft.company || 'Chưa chọn công ty'}</span></div>
