@@ -8,7 +8,7 @@ type Answer = { score?: number; firstImpression?: string; messageClarity?: strin
 type Draft = { name: string; department: string; company: Company | ''; answers: Record<string, Answer>; firstWebsiteNeed?: string; textAmount?: string; clickIntent?: string; global: string };
 type Group = { name: string; images: [string, string] };
 
-const departments = ['Marketing', 'Kinh doanh', 'PM Online', 'Mua hàng', 'Kỹ thuật', 'HCNS', 'Khác'];
+const departments = ['Marketing', 'Kinh doanh', 'PM Online', 'Mua hàng', 'Kỹ thuật', 'HCNS'];
 const firstImpressions = ['Sản phẩm', 'Giá / Khuyến mãi', 'Nội dung chính', 'Màu sắc / Hình ảnh', 'Thương hiệu', 'Không có gì nổi bật'];
 const clarityOptions = ['Hiểu ngay', 'Hiểu nhưng phải nhìn thêm', 'Hơi khó hiểu', 'Không hiểu rõ'];
 const goodOptions = ['Sản phẩm nổi bật', 'Màu sắc đẹp', 'Dễ đọc', 'Nội dung rõ ràng', 'Giá / Khuyến mãi nổi bật', 'Nhìn hiện đại', 'Nhận diện thương hiệu rõ', 'Không có điểm nào đặc biệt'];
@@ -123,7 +123,7 @@ export default function Home() {
 
   const validate = () => {
     const next: string[] = [];
-    if (!draft.name || !draft.department || !draft.company) next.push('profile');
+    if (!draft.name.trim() || !draft.department.trim() || !draft.company) next.push('profile');
     groups.forEach(group => {
       const current = answer(group.name);
       if (!current.firstImpression) next.push('first-' + group.name);
@@ -133,7 +133,7 @@ export default function Home() {
     setErrors(next);
     if (next.length) {
       document.getElementById(next[0])?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setMessage('Vui lòng chọn một đáp án ở mục được đánh dấu.');
+      setMessage(!draft.department.trim() ? 'Vui lòng nhập phòng ban.' : 'Vui lòng chọn một đáp án ở mục được đánh dấu.');
       return false;
     }
     return true;
@@ -208,11 +208,11 @@ export default function Home() {
     {welcome && <div className="welcome" role="dialog" aria-modal="true" aria-label="Bắt đầu khảo sát"><section>
       <img className="welcome-logo" src="/nkc-logo.png" alt="NKC" /><p>KHẢO SÁT BANNER 2026</p><h2>Bắt đầu đánh giá</h2><span>Điền thông tin một lần, sau đó xem banner và trả lời ngắn gọn.</span>
       <label>Họ và tên <b>*</b><input autoFocus value={draft.name} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} placeholder="Nhập họ và tên" /></label>
-      <label>Phòng ban <b>*</b><select value={draft.department} onChange={event => setDraft(current => ({ ...current, department: event.target.value }))}><option value="">Chọn phòng ban</option>{departments.map(department => <option key={department}>{department}</option>)}</select></label>
+      <label>Phòng ban <b>*</b><input list="department-options" value={draft.department} onChange={event => setDraft(current => ({ ...current, department: event.target.value }))} placeholder="Nhập hoặc chọn phòng ban" /><datalist id="department-options">{departments.map(department => <option value={department} key={department} />)}</datalist></label>
       <div className="welcome-company"><label>Công ty <b>*</b></label><div className="companies">{([
         ['Nguyên Kim', 'Vi Tính Nguyên Kim'], ['Chính Nhân', 'Công Nghệ Chính Nhân'], ['Kết Nối Thông Minh', 'SMC'],
       ] as [Company, string][]).map(([company, subtitle]) => <button type="button" key={company} className={draft.company === company ? 'on' : ''} onClick={() => setDraft(current => ({ ...current, company }))}><strong>{company}</strong><small>{subtitle}</small></button>)}</div></div>
-      <button className="start" type="button" onClick={() => draft.name && draft.department && draft.company ? setWelcome(false) : setMessage('Vui lòng nhập tên, phòng ban và chọn công ty.')}>BẮT ĐẦU KHẢO SÁT</button>
+      <button className="start" type="button" onClick={() => draft.name.trim() && draft.department.trim() && draft.company ? setWelcome(false) : setMessage(!draft.department.trim() ? 'Vui lòng nhập phòng ban.' : 'Vui lòng nhập tên và chọn công ty.')}>BẮT ĐẦU KHẢO SÁT</button>
     </section></div>}
     {message && <button className="toast" onClick={() => setMessage('')}>{message}<X size={16} /></button>}
     {photo && <div className="lightbox" role="dialog" aria-modal="true" onMouseDown={() => setPhoto(null)}><button onClick={() => setPhoto(null)} aria-label="Đóng ảnh lớn"><X /></button><img src={photo} alt="Banner xem lớn" onMouseDown={event => event.stopPropagation()} /></div>}
