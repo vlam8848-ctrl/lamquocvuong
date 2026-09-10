@@ -120,6 +120,8 @@ button,input,select,textarea{font:inherit}
 .survey .feedback-note.is-current{box-shadow:0 0 0 3px var(--brand-soft)}
 @media(max-width:760px){.survey .feedback-note{margin-left:20px;margin-right:20px;padding:16px}.survey .feedback-note h3{font-size:17px}}
 
-/* Preserve the existing two-banner presentation; only keep the existing cluster in view on larger screens. */
-.survey .banner-sticky-wrap{position:static}
-@media(min-width:1024px){.survey .banner-sticky-wrap{position:sticky;top:88px;z-index:2;background:#fff;box-shadow:0 7px 14px rgba(16,24,40,.06)}.survey .banner-sticky-wrap .banners{margin-bottom:22px}}
+/* Preserve the existing two-banner presentation without an opaque sticky spacer. */
+.survey .banner-sticky-wrap{display:flow-root;position:static;margin:22px 0}
+.survey .category .banner-sticky-wrap .banners{margin:0 28px}
+@media(min-width:1024px){.survey .banner-sticky-wrap{position:sticky;top:88px;z-index:2}}
+@media(max-width:760px){.survey .category .banner-sticky-wrap .banners{margin:0 20px}}
