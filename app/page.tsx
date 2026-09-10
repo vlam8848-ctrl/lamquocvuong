@@ -29,7 +29,7 @@ const data: Record<Company, Group[]> = {
     { name: 'Laptop', images: ['/banners/4.png', '/banners/731761836_1660404446092190_8940495999503197811_n.jpg'] },
     { name: 'PC', images: ['/banners/3.png', '/banners/747625327_1674673154665319_3302438534809789923_n.jpg'] },
     { name: 'LCD / Màn hình', images: ['/banners/616811699_1511266151006021_9046361683076941228_n.jpg', '/banners/666047947_1583526670446635_3788494658393941418_n.jpg'] },
-    { name: 'Phụ kiện', images: ['/banners/611256711_1326692079497375_270400890844479602_n.jpg', '/banners/663238762_1399808015519114_3412210904947284787_n.jpg'] },
+    { name: 'Phụ kiện', images: ['/banners/CMLO_910_005882.png', '/banners/CWLO_C925.png'] },
     { name: 'Linh kiện', images: ['/banners/1788936265228_201525182566124453_7011973515233209377_edb5b45b607ea665f81233fcaa32c182.jpg', '/banners/672681412_1591893246276644_3636714957270481989_n.jpg'] },
     { name: 'Phần mềm', images: ['/banners/8.png', '/banners/Lightroom%20w%20Classic.png'] },
     { name: 'Máy in', images: ['/banners/1788860801422_201525182566124453_7011973515233209377_bedf5f81fd6617aa51f977aa1b4521fb.jpg', '/banners/6.png'] },
