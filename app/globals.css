@@ -89,7 +89,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand-primary);box-sh
 @media(max-width:760px){.survey .question-focus h3{font-size:16px}.survey .review-dock{margin-left:20px;margin-right:20px;border-radius:15px;padding:11px 10px}.survey .review-track{gap:3px}.survey .review-track button{font-size:10px}.survey .review-track button i{width:27px;height:27px}.survey .review-track button span{display:none}.survey .review-track button.active span{display:block;position:absolute;margin-top:33px}.survey .review-track{padding-bottom:15px}.survey .review-meta strong{font-size:13px}}
 
 /* The review dock follows the scroll while the entire category stays available. */
-.survey .category.step-card{overflow:visible}.survey .review-dock{position:sticky;top:86px;z-index:6}.survey .question-focus.is-current{background:linear-gradient(90deg,var(--brand-soft-2),#fff 28%);margin-left:18px;margin-right:18px;padding-left:10px;padding-right:10px;border-radius:12px}
+.survey .category.step-card{overflow:visible}.survey .review-dock{position:static;top:auto;z-index:auto}.survey .question-focus.is-current{background:linear-gradient(90deg,var(--brand-soft-2),#fff 28%);margin-left:18px;margin-right:18px;padding-left:10px;padding-right:10px;border-radius:12px}
 @media(max-width:760px){.survey .review-dock{position:static}.survey .question-focus.is-current{margin-left:14px;margin-right:14px}}
 
 /* Welcome company choices: equal cards, balanced long title, brand-led selection. */

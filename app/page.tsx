@@ -60,6 +60,10 @@ const data: Record<Company, Group[]> = {
 
 const endpoint = 'https://script.google.com/macros/s/AKfycbzOEmCT-VvR_TDJ-ycWrOKiahjjOxIUL7ddas69u_0y_FtrLe67s0vILxoTR9sszZCR/exec';
 const blank = (): Answer => ({ good: [], improve: [], other: '', note: '' });
+const normalizeChoices = (choices: string[] | undefined, exclusive: string) => {
+  const selected = Array.isArray(choices) ? choices : [];
+  return selected.includes(exclusive) ? [exclusive] : selected.filter(choice => choice !== exclusive).slice(0, 2);
+};
 const initial: Draft = { name: '', department: '', company: '', answers: {}, global: '' };
 const itemKey = (company: string, name: string) => company + ' • ' + name;
 const getCompanyTheme = (company: Draft['company']) => company === 'Nguyên Kim' ? 'nk' : company === 'Chính Nhân' ? 'cn' : company === 'Kết Nối Thông Minh' ? 'smc' : '';
@@ -119,7 +123,12 @@ export default function Home() {
       const saved = localStorage.getItem('nkc-banner-review-final');
       if (saved) {
         const parsed = JSON.parse(saved) as Draft;
-        setDraft({ ...initial, ...parsed, answers: parsed.answers || {} });
+        const answers = Object.fromEntries(Object.entries(parsed.answers || {}).map(([key, answer]) => [key, {
+          ...blank(), ...answer,
+          good: normalizeChoices(answer.good, 'Không có điểm nào đặc biệt'),
+          improve: normalizeChoices(answer.improve, 'Không cần chỉnh'),
+        }]));
+        setDraft({ ...initial, ...parsed, answers });
         setWelcome(!(parsed.name && parsed.department && parsed.company));
       }
     } catch {}
